@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Camera, AlertCircle, BookOpen, Plus, Loader2, FlipHorizontal } from 'lucide-react';
+import { X, Camera, AlertCircle, BookOpen, Plus, Loader2 } from 'lucide-react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import { googleBooksAPI, BookSearchResult } from '@/utils/googleBooks';
 import { Book, ReadingStatus } from '@/types/book';
@@ -20,7 +20,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
   const [status, setStatus] = useState<ReadingStatus>('want-to-read');
   const [hasCamera, setHasCamera] = useState(true);
   const [scanning, setScanning] = useState(true);
-  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment'); // Default to back camera
+  // html5-qrcode handles camera selection internally
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const scannerId = 'qr-code-scanner';
 
@@ -30,34 +30,31 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
 
     try {
       // Get viewport dimensions for responsive qrbox
-      const viewportWidth = Math.min(window.innerWidth, 400);
-      const qrboxSize = Math.min(viewportWidth * 0.8, 300);
+      const viewportWidth = Math.min(window.innerWidth - 40, 350);
+      const qrboxSize = Math.min(viewportWidth * 0.9, 280);
       
       const config = {
         fps: 10,
-        qrbox: { width: qrboxSize, height: qrboxSize * 0.6 }, // Wider for barcode scanning
-        aspectRatio: 1.77, // 16:9 aspect ratio for better mobile experience
-        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-        videoConstraints: {
-          facingMode: facingMode, // Use selected camera (back camera by default)
-          aspectRatio: { ideal: 1.77 }
-        },
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true // Use native barcode detection if available
-        }
+        qrbox: { width: qrboxSize, height: Math.round(qrboxSize * 0.6) }, // Wider rectangle for barcode scanning
+        aspectRatio: 1.0,
+        showTorchButtonIfSupported: true, // Show flashlight if available
+        showZoomSliderIfSupported: true, // Show zoom if available
+        defaultZoomValueIfSupported: 2, // Default zoom level
+        disableFlip: false, // Allow camera flip
+        rememberLastUsedCamera: true // Remember camera choice
       };
 
       const scanner = new Html5QrcodeScanner(
         scannerId,
         config,
-        false // verbose logging disabled
+        true // verbose logging enabled to help debug
       );
 
       scannerRef.current = scanner;
 
       scanner.render(
         (decodedText) => {
-          console.log('Barcode detected:', decodedText);
+          console.log('✅ Barcode/QR detected:', decodedText);
           // Provide haptic feedback on successful scan (if supported)
           if (navigator.vibrate) {
             navigator.vibrate(200);
@@ -67,8 +64,10 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
         (errorMessage) => {
           // This gets called for every failed scan attempt, which is normal
           // Only log real errors, not the constant "No QR code found" messages
-          if (!errorMessage.includes('No') && !errorMessage.includes('not found')) {
-            console.error('Scanner error:', errorMessage);
+          if (!errorMessage.includes('No QR code found') && 
+              !errorMessage.includes('QR code parse error') &&
+              !errorMessage.includes('NotFoundException')) {
+            console.warn('Scanner warning:', errorMessage);
           }
         }
       );
@@ -76,7 +75,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
       console.error('Scanner initialization error:', err);
       handleScanError(err instanceof Error ? err.message : String(err));
     }
-  }, [facingMode, scannerId]);
+  }, [scannerId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -195,19 +194,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
     setScanning(false);
   };
 
-  const toggleCamera = async () => {
-    const newFacingMode = facingMode === 'environment' ? 'user' : 'environment';
-    setFacingMode(newFacingMode);
-    if (scanning) {
-      // Restart scanning with new camera
-      setScanning(false);
-      await stopScanning();
-      setTimeout(() => {
-        setScanning(true);
-        startScanning();
-      }, 500);
-    }
-  };
+  // Camera switching is handled by html5-qrcode internally
 
   if (!isOpen) return null;
 
@@ -222,16 +209,6 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
           <h2 className="text-lg font-semibold">Scan Book Barcode</h2>
         </div>
         <div className="flex items-center gap-2">
-          {/* Camera Toggle */}
-          {scanning && hasCamera && (
-            <button
-              onClick={toggleCamera}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-              title={`Switch to ${facingMode === 'environment' ? 'front' : 'back'} camera`}
-            >
-              <FlipHorizontal className="h-5 w-5" />
-            </button>
-          )}
           <button
             onClick={onClose}
             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
@@ -251,7 +228,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
                 Point your camera at the book&apos;s barcode
               </p>
               <p className="text-xs opacity-75 mt-1">
-                Using {facingMode === 'environment' ? 'back' : 'front'} camera
+                Use the controls below to switch cameras if needed
               </p>
             </div>
 
