@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Book } from '@/types/book';
-import { MoreVertical, Edit, Trash2, Star, Clock, CheckCircle2, Heart } from 'lucide-react';
+import { MoreVertical, Trash2, Star, Clock, CheckCircle2, Heart } from 'lucide-react';
 import { format } from 'date-fns';
+import Image from 'next/image';
 
 interface BookCardProps {
   book: Book;
@@ -29,7 +30,6 @@ const statusConfig = {
 
 export default function BookCard({ book, onUpdate, onDelete }: BookCardProps) {
   const [showDropdown, setShowDropdown] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
 
   const StatusIcon = statusConfig[book.status].icon;
 
@@ -107,9 +107,11 @@ export default function BookCard({ book, onUpdate, onDelete }: BookCardProps) {
       {/* Book Cover Placeholder */}
       <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl mb-4 flex items-center justify-center">
         {book.coverUrl ? (
-          <img
+          <Image
             src={book.coverUrl}
             alt={`${book.title} cover`}
+            width={200}
+            height={300} 
             className="w-full h-full object-cover rounded-xl"
           />
         ) : (

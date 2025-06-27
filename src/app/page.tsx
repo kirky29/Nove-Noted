@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Book, ReadingStatus } from '@/types/book';
 import { storage } from '@/utils/storage';
-import { BookOpen, Plus, TrendingUp, Clock, CheckCircle2, Heart } from 'lucide-react';
+import { BookOpen, Plus, Clock, CheckCircle2, Heart } from 'lucide-react';
 import BookCard from '@/components/BookCard';
 import AddBookModal from '@/components/AddBookModal';
 import StatsCard from '@/components/StatsCard';

@@ -13,7 +13,7 @@ export const storage = {
       
       const books = JSON.parse(stored);
       // Convert date strings back to Date objects
-      return books.map((book: any) => ({
+      return books.map((book: Book) => ({
         ...book,
         dateAdded: new Date(book.dateAdded),
         dateStarted: book.dateStarted ? new Date(book.dateStarted) : undefined,
