@@ -7,6 +7,7 @@ import { BookOpen, Plus, Clock, CheckCircle2, Heart, Search } from 'lucide-react
 import BookCard from '@/components/BookCard';
 import AddBookModal from '@/components/AddBookModal';
 import BookSearchModal from '@/components/BookSearchModal';
+import BookProfileModal from '@/components/BookProfileModal';
 import LocalSearchBar from '@/components/LocalSearchBar';
 import StatsCard from '@/components/StatsCard';
 
@@ -14,6 +15,7 @@ export default function HomePage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [activeTab, setActiveTab] = useState<ReadingStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({
@@ -54,6 +56,11 @@ export default function HomePage() {
       setBooks(prev => prev.filter(book => book.id !== id));
       setStats(storage.getReadingStats());
     }
+  };
+
+  // Handle opening book profile
+  const handleOpenBookProfile = (book: Book) => {
+    setSelectedBook(book);
   };
 
   // Filter books based on active tab and search query
@@ -242,6 +249,7 @@ export default function HomePage() {
                     book={book}
                     onUpdate={handleUpdateBook}
                     onDelete={handleDeleteBook}
+                    onOpenProfile={handleOpenBookProfile}
                   />
                 ))}
                 </div>
@@ -263,6 +271,15 @@ export default function HomePage() {
         <BookSearchModal
           onClose={() => setIsSearchModalOpen(false)}
           onAdd={handleAddBook}
+        />
+      )}
+
+      {selectedBook && (
+        <BookProfileModal
+          book={selectedBook}
+          onClose={() => setSelectedBook(null)}
+          onUpdate={handleUpdateBook}
+          onDelete={handleDeleteBook}
         />
       )}
     </div>

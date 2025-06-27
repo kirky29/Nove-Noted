@@ -8,6 +8,7 @@ interface BookCardProps {
   book: Book;
   onUpdate: (id: string, updates: Partial<Book>) => void;
   onDelete: (id: string) => void;
+  onOpenProfile: (book: Book) => void;
 }
 
 const statusConfig = {
@@ -28,7 +29,7 @@ const statusConfig = {
   },
 };
 
-export default function BookCard({ book, onUpdate, onDelete }: BookCardProps) {
+export default function BookCard({ book, onUpdate, onDelete, onOpenProfile }: BookCardProps) {
   const [showDropdown, setShowDropdown] = useState(false);
 
   const StatusIcon = statusConfig[book.status].icon;
@@ -53,7 +54,7 @@ export default function BookCard({ book, onUpdate, onDelete }: BookCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 group">
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 group cursor-pointer" onClick={() => onOpenProfile(book)}>
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${statusConfig[book.status].color}`}>
@@ -63,7 +64,10 @@ export default function BookCard({ book, onUpdate, onDelete }: BookCardProps) {
         
         <div className="relative">
           <button
-            onClick={() => setShowDropdown(!showDropdown)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDropdown(!showDropdown);
+            }}
             className="p-1 rounded-lg hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <MoreVertical className="h-4 w-4 text-gray-400" />
@@ -79,7 +83,10 @@ export default function BookCard({ book, onUpdate, onDelete }: BookCardProps) {
                 return (
                   <button
                     key={status}
-                    onClick={() => handleStatusChange(status as Book['status'])}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStatusChange(status as Book['status']);
+                    }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <Icon className="h-4 w-4" />
@@ -89,7 +96,8 @@ export default function BookCard({ book, onUpdate, onDelete }: BookCardProps) {
               })}
               <div className="border-t border-gray-100 mt-2 pt-2">
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     onDelete(book.id);
                     setShowDropdown(false);
                   }}
@@ -158,12 +166,15 @@ export default function BookCard({ book, onUpdate, onDelete }: BookCardProps) {
         {/* Rating */}
         {book.status === 'read' && (
           <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                onClick={() => handleRatingChange(star)}
-                className="transition-colors"
-              >
+                         {[1, 2, 3, 4, 5].map((star) => (
+               <button
+                 key={star}
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   handleRatingChange(star);
+                 }}
+                 className="transition-colors"
+               >
                 <Star
                   className={`h-4 w-4 ${
                     star <= (book.rating || 0)
