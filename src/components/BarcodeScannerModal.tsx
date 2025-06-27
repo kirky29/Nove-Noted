@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Camera, AlertCircle, BookOpen, Plus, Loader2 } from 'lucide-react';
-import BarcodeScannerComponent from 'react-qr-barcode-scanner';
+import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import { googleBooksAPI, BookSearchResult } from '@/utils/googleBooks';
 import { Book, ReadingStatus } from '@/types/book';
 import Image from 'next/image';
@@ -20,6 +20,8 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
   const [status, setStatus] = useState<ReadingStatus>('want-to-read');
   const [hasCamera, setHasCamera] = useState(true);
   const [scanning, setScanning] = useState(true);
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerId = 'qr-code-scanner';
 
   useEffect(() => {
     if (isOpen) {
@@ -28,8 +30,66 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
       setError('');
       setScanning(true);
       setIsLoading(false);
+      setHasCamera(true);
+      startScanning();
+    } else {
+      stopScanning();
     }
+
+    return () => {
+      stopScanning();
+    };
   }, [isOpen]);
+
+  const startScanning = () => {
+    // Clean up any existing scanner
+    stopScanning();
+
+    try {
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 100 },
+        aspectRatio: 1.0,
+        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+      };
+
+      const scanner = new Html5QrcodeScanner(
+        scannerId,
+        config,
+        false // verbose logging disabled
+      );
+
+      scannerRef.current = scanner;
+
+      scanner.render(
+        (decodedText) => {
+          console.log('Barcode detected:', decodedText);
+          handleBarcodeScan(decodedText);
+        },
+        (errorMessage) => {
+          // This gets called for every failed scan attempt, which is normal
+          // Only log real errors, not the constant "No QR code found" messages
+          if (!errorMessage.includes('No') && !errorMessage.includes('not found')) {
+            console.error('Scanner error:', errorMessage);
+          }
+        }
+      );
+    } catch (err) {
+      console.error('Scanner initialization error:', err);
+      handleScanError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const stopScanning = async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.clear();
+        scannerRef.current = null;
+      } catch (err) {
+        console.log('Scanner cleanup error (ignored):', err);
+      }
+    }
+  };
 
   const handleBarcodeScan = async (result: string) => {
     if (!result || isLoading) return;
@@ -46,6 +106,9 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
         setError('Invalid barcode. Please try scanning again.');
         setScanning(true);
         setIsLoading(false);
+        setTimeout(() => {
+          if (!scannedBook) startScanning();
+        }, 1000);
         return;
       }
 
@@ -54,14 +117,22 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
       
       if (books.length > 0) {
         setScannedBook(books[0]);
+        // Stop scanning when book is found
+        await stopScanning();
       } else {
         setError('Book not found. Try scanning again or search manually.');
         setScanning(true);
+        setTimeout(() => {
+          if (!scannedBook) startScanning();
+        }, 1000);
       }
     } catch (error) {
       console.error('Error searching for book:', error);
       setError('Error searching for book. Please try again.');
       setScanning(true);
+      setTimeout(() => {
+        if (!scannedBook) startScanning();
+      }, 1000);
     } finally {
       setIsLoading(false);
     }
@@ -91,13 +162,17 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
     setError('');
     setScanning(true);
     setIsLoading(false);
+    startScanning();
   };
 
   const handleScanError = (error: string) => {
     console.error('Scanner error details:', error);
-    if (error.includes('camera') || error.includes('permission')) {
+    if (error.includes('camera') || error.includes('permission') || error.includes('NotAllowedError')) {
       setHasCamera(false);
       setError('Camera access denied. Please enable camera permissions and try again.');
+    } else if (error.includes('NotFoundError') || error.includes('No camera')) {
+      setHasCamera(false);
+      setError('No camera found. Please make sure your device has a camera.');
     } else {
       setError(`Scanner error: ${error}. Please try again.`);
     }
@@ -135,31 +210,8 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
                 </p>
               </div>
 
-              {/* Scanner Component */}
-              <div className="relative w-full h-64 bg-black rounded-lg overflow-hidden">
-                <BarcodeScannerComponent
-                  width="100%"
-                  height="100%"
-                  onUpdate={(err: unknown, result?: { getText: () => string }) => {
-                    console.log('Scanner update:', { err, result });
-                    if (result) {
-                      console.log('Barcode detected:', result.getText());
-                      handleBarcodeScan(result.getText());
-                    }
-                    if (err) {
-                      console.error('Scanner callback error:', err);
-                      handleScanError(JSON.stringify(err) || String(err));
-                    }
-                  }}
-                />
-                
-                {/* Scanning overlay */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-48 h-24 border-2 border-white/50 rounded-lg">
-                    <div className="w-full h-full border border-white/30 rounded-lg animate-pulse"></div>
-                  </div>
-                </div>
-              </div>
+              {/* Scanner Container */}
+              <div id={scannerId} className="w-full"></div>
 
               {isLoading && (
                 <div className="flex items-center justify-center py-4">

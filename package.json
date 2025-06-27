@@ -12,12 +12,12 @@
   "dependencies": {
     "date-fns": "^4.1.0",
     "firebase": "^11.9.1",
+    "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.460.0",
     "next": "15.3.4",
     "quagga": "^0.12.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-qr-barcode-scanner": "^2.1.7"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
