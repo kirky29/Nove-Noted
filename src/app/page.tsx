@@ -86,7 +86,12 @@ export default function Home() {
   };
 
   const handleAddWishListBook = async (newBook: Omit<WishListBook, 'id' | 'dateAdded'>) => {
-    await firestoreStorage.addWishListBook(newBook);
+    try {
+      await firestoreStorage.addWishListBook(newBook);
+      console.log('Book added to wish list successfully');
+    } catch (error) {
+      console.error('Error adding book to wish list:', error);
+    }
   };
 
   const handleUpdateBook = async (updatedBook: Book) => {

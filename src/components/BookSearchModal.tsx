@@ -69,6 +69,7 @@ export default function BookSearchModal({ onClose, onAdd, onAddToWishList }: Boo
     };
 
     onAdd(bookData);
+    onClose(); // Close the modal after adding to library
   };
 
   const handleAddToWishList = () => {
@@ -87,6 +88,7 @@ export default function BookSearchModal({ onClose, onAdd, onAddToWishList }: Boo
     };
 
     onAddToWishList(wishListBookData);
+    onClose(); // Close the modal after adding to wish list
   };
 
   const truncateText = (text: string, maxLength: number) => {
