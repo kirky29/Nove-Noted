@@ -11,7 +11,7 @@ import AddBookModal from '@/components/AddBookModal';
 import BookSearchModal from '@/components/BookSearchModal';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import LocalSearchBar from '@/components/LocalSearchBar';
-import { Book, ReadingStatus } from '@/types/book';
+import { Book, ReadingStatus, WishListBook } from '@/types/book';
 import { firestoreStorage } from '@/utils/firestoreStorage';
 import { 
   Book as BookIcon, 
@@ -24,14 +24,18 @@ import {
   CheckCircle2,
   Heart,
   FileText,
-  Camera
+  Camera,
+  Star,
+  Trash2,
+  ArrowRight
 } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
-  const [activeTab, setActiveTab] = useState<ReadingStatus | 'all'>('all');
+  const [wishListBooks, setWishListBooks] = useState<WishListBook[]>([]);
+  const [activeTab, setActiveTab] = useState<ReadingStatus | 'all' | 'wishlist'>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
@@ -40,11 +44,18 @@ export default function Home() {
 
   useEffect(() => {
     if (user) {
-      const unsubscribe = firestoreStorage.onBooksChange((updatedBooks: Book[]) => {
+      const unsubscribeBooks = firestoreStorage.onBooksChange((updatedBooks: Book[]) => {
         setBooks(updatedBooks);
       });
 
-      return unsubscribe;
+      const unsubscribeWishList = firestoreStorage.onWishListBooksChange((updatedWishListBooks: WishListBook[]) => {
+        setWishListBooks(updatedWishListBooks);
+      });
+
+      return () => {
+        unsubscribeBooks();
+        unsubscribeWishList();
+      };
     }
   }, [user]);
 
@@ -62,8 +73,20 @@ export default function Home() {
     return matchesTab && matchesSearch;
   });
 
+  // Filter wish list books based on search query
+  const filteredWishListBooks = wishListBooks.filter(book => {
+    const matchesSearch = searchQuery === '' || 
+      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      book.author.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+
   const handleAddBook = async (newBook: Omit<Book, 'id' | 'dateAdded'>) => {
     await firestoreStorage.addBook(newBook);
+  };
+
+  const handleAddWishListBook = async (newBook: Omit<WishListBook, 'id' | 'dateAdded'>) => {
+    await firestoreStorage.addWishListBook(newBook);
   };
 
   const handleUpdateBook = async (updatedBook: Book) => {
@@ -74,6 +97,14 @@ export default function Home() {
     await firestoreStorage.deleteBook(bookId);
   };
 
+  const handleDeleteWishListBook = async (bookId: string) => {
+    await firestoreStorage.deleteWishListBook(bookId);
+  };
+
+  const handleMoveWishListBookToCollection = async (wishListBookId: string, status: ReadingStatus = 'want-to-read') => {
+    await firestoreStorage.moveWishListBookToCollection(wishListBookId, status);
+  };
+
   const getStats = () => {
     const reading = books.filter(book => book.status === 'currently-reading').length;
     const completed = books.filter(book => book.status === 'read').length;
@@ -82,14 +113,17 @@ export default function Home() {
       .filter(book => book.status === 'read')
       .reduce((sum, book) => sum + (book.pages || 0), 0);
 
-    return { reading, completed, wantToRead, totalPages };
+    return { reading, completed, wantToRead, totalPages, wishList: wishListBooks.length };
   };
 
   const stats = getStats();
 
-  const getTabCount = (tab: ReadingStatus | 'all') => {
+  const getTabCount = (tab: ReadingStatus | 'all' | 'wishlist') => {
     if (tab === 'all') {
       return books.length;
+    }
+    if (tab === 'wishlist') {
+      return wishListBooks.length;
     }
     return books.filter(book => book.status === tab).length;
   };
@@ -107,6 +141,7 @@ export default function Home() {
     { key: 'want-to-read' as const, label: 'Want to Read', icon: '📚' },
     { key: 'currently-reading' as const, label: 'Currently Reading', icon: '📖' },
     { key: 'read' as const, label: 'Read', icon: '✅' },
+    { key: 'wishlist' as const, label: 'Wish List', icon: '⭐' },
   ];
 
   return (
@@ -184,7 +219,7 @@ export default function Home() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <StatsCard
             title="Currently Reading"
             value={stats.reading}
@@ -202,6 +237,12 @@ export default function Home() {
             value={stats.wantToRead}
             icon={Heart}
             color="red"
+          />
+          <StatsCard
+            title="Wish List"
+            value={stats.wishList}
+            icon={Star}
+            color="purple"
           />
           <StatsCard
             title="Pages Read"
@@ -240,7 +281,7 @@ export default function Home() {
         <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 mb-8">
           <LocalSearchBar
             onSearch={setSearchQuery}
-            placeholder="Search your library..."
+            placeholder={activeTab === 'wishlist' ? "Search your wish list..." : "Search your library..."}
           />
           
           <div className="flex flex-wrap gap-2 mt-6">
@@ -264,40 +305,125 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Books Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredBooks.map((book) => (
-            <BookCard
-              key={book.id}
-              book={book}
-              onUpdate={(id, updates) => handleUpdateBook({ ...book, ...updates })}
-              onDelete={handleDeleteBook}
-              onOpenProfile={() => router.push(`/book/${book.id}`)}
-            />
-          ))}
-        </div>
+        {/* Content based on active tab */}
+        {activeTab === 'wishlist' ? (
+          // Wish List Books Grid
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredWishListBooks.map((wishListBook) => (
+              <div key={wishListBook.id} className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 hover:bg-white/20 transition-all">
+                <div className="flex gap-4">
+                  {/* Book Cover */}
+                  <div className="flex-shrink-0">
+                    {wishListBook.coverUrl ? (
+                      <Image
+                        src={wishListBook.coverUrl}
+                        alt={`${wishListBook.title} cover`}
+                        width={80}
+                        height={120}
+                        className="rounded-lg object-cover shadow-md"
+                      />
+                    ) : (
+                      <div className="w-20 h-30 bg-white/20 rounded-lg flex items-center justify-center">
+                        <BookOpen className="h-8 w-8 text-white/60" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Book Info */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-white text-sm leading-tight line-clamp-2 mb-1">
+                      {wishListBook.title}
+                    </h3>
+                    <p className="text-white/70 text-sm mb-2">
+                      by {wishListBook.author}
+                    </p>
+                    
+                    {wishListBook.publishedYear && (
+                      <p className="text-white/50 text-xs mb-2">{wishListBook.publishedYear}</p>
+                    )}
+                    
+                    {wishListBook.pages && (
+                      <p className="text-white/50 text-xs mb-3">{wishListBook.pages} pages</p>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleMoveWishListBookToCollection(wishListBook.id)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-green-600/20 text-green-300 rounded-lg hover:bg-green-600/30 transition-colors text-xs"
+                        title="Add to collection"
+                      >
+                        <ArrowRight className="h-3 w-3" />
+                        Add
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWishListBook(wishListBook.id)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-red-600/20 text-red-300 rounded-lg hover:bg-red-600/30 transition-colors text-xs"
+                        title="Remove from wish list"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                {wishListBook.description && (
+                  <div className="mt-3 pt-3 border-t border-white/10">
+                    <p className="text-white/60 text-xs line-clamp-3 leading-relaxed">
+                      {wishListBook.description.replace(/<[^>]*>/g, '')}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Regular Books Grid
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredBooks.map((book) => (
+              <BookCard
+                key={book.id}
+                book={book}
+                onUpdate={(id, updates) => handleUpdateBook({ ...book, ...updates })}
+                onDelete={handleDeleteBook}
+                onOpenProfile={() => router.push(`/book/${book.id}`)}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Empty State */}
-        {filteredBooks.length === 0 && (
+        {((activeTab === 'wishlist' && filteredWishListBooks.length === 0) || 
+          (activeTab !== 'wishlist' && filteredBooks.length === 0)) && (
           <div className="text-center py-16">
-            <BookIcon className="h-16 w-16 text-white/40 mx-auto mb-4" />
+            {activeTab === 'wishlist' ? (
+              <Star className="h-16 w-16 text-white/40 mx-auto mb-4" />
+            ) : (
+              <BookIcon className="h-16 w-16 text-white/40 mx-auto mb-4" />
+            )}
             <h3 className="text-xl font-semibold text-white mb-2">
-              {searchQuery ? 'No books found' : 'No books in this category'}
+              {searchQuery ? 'No books found' : 
+               activeTab === 'wishlist' ? 'Your wish list is empty' : 
+               'No books in this category'}
             </h3>
             <p className="text-white/60 mb-6">
               {searchQuery 
                 ? `No books match "${searchQuery}"`
-                : activeTab === 'all' 
-                  ? 'Start building your personal library by adding your first book!'
-                  : `Add some books to your ${activeTab.replace('-', ' ')} list!`
+                : activeTab === 'wishlist'
+                  ? 'Start adding books you want to read someday!'
+                  : activeTab === 'all' 
+                    ? 'Start building your personal library by adding your first book!'
+                    : `Add some books to your ${activeTab.replace('-', ' ')} list!`
               }
             </p>
             {!searchQuery && (
               <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="px-6 py-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg hover:from-green-600 hover:to-blue-700 transition-all duration-200"
+                onClick={() => setIsSearchModalOpen(true)}
+                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all duration-200"
               >
-                Add Your First Book
+                {activeTab === 'wishlist' ? 'Search Books to Add' : 'Add Your First Book'}
               </button>
             )}
           </div>
@@ -316,6 +442,7 @@ export default function Home() {
         <BookSearchModal
           onClose={() => setIsSearchModalOpen(false)}
           onAdd={handleAddBook}
+          onAddToWishList={handleAddWishListBook}
         />
       )}
 
@@ -323,6 +450,7 @@ export default function Home() {
         isOpen={isScanModalOpen}
         onClose={() => setIsScanModalOpen(false)}
         onAddBook={handleAddBook}
+        onAddToWishList={handleAddWishListBook}
       />
     </div>
   );

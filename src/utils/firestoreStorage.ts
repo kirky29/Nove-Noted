@@ -16,9 +16,10 @@ import {
   UpdateData
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { Book, ReadingStatus } from '@/types/book';
+import { Book, ReadingStatus, WishListBook } from '@/types/book';
 
 const COLLECTION_NAME = 'books';
+const WISHLIST_COLLECTION_NAME = 'wishlist';
 
 // Get current user ID or throw error if not authenticated
 const getCurrentUserId = (): string => {
@@ -51,6 +52,25 @@ const convertFirestoreDoc = (doc: QueryDocumentSnapshot<DocumentData>): Book => 
   };
 };
 
+// Convert Firestore document to WishListBook object
+const convertWishListFirestoreDoc = (doc: QueryDocumentSnapshot<DocumentData>): WishListBook => {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    title: data.title,
+    author: data.author,
+    isbn: data.isbn,
+    coverUrl: data.coverUrl,
+    pages: data.pages,
+    genre: data.genre,
+    publisher: data.publisher,
+    publishedYear: data.publishedYear,
+    description: data.description,
+    dateAdded: data.dateAdded?.toDate() || new Date(),
+    userId: data.userId,
+  };
+};
+
 // Convert Book object to Firestore document
 const convertToFirestoreDoc = (book: Omit<Book, 'id'>, userId: string) => {
   return {
@@ -58,6 +78,15 @@ const convertToFirestoreDoc = (book: Omit<Book, 'id'>, userId: string) => {
     dateAdded: book.dateAdded ? Timestamp.fromDate(book.dateAdded) : Timestamp.now(),
     dateStarted: book.dateStarted ? Timestamp.fromDate(book.dateStarted) : null,
     dateFinished: book.dateFinished ? Timestamp.fromDate(book.dateFinished) : null,
+    userId: userId,
+  };
+};
+
+// Convert WishListBook object to Firestore document
+const convertWishListToFirestoreDoc = (book: Omit<WishListBook, 'id'>, userId: string) => {
+  return {
+    ...book,
+    dateAdded: book.dateAdded ? Timestamp.fromDate(book.dateAdded) : Timestamp.now(),
     userId: userId,
   };
 };
@@ -176,11 +205,13 @@ export const firestoreStorage = {
   getReadingStats: async () => {
     try {
       const books = await firestoreStorage.getBooks();
+      const wishListBooks = await firestoreStorage.getWishListBooks();
       return {
         total: books.length,
         read: books.filter(book => book.status === 'read').length,
         currentlyReading: books.filter(book => book.status === 'currently-reading').length,
         wantToRead: books.filter(book => book.status === 'want-to-read').length,
+        wishList: wishListBooks.length,
       };
     } catch (error) {
       console.error('Error calculating reading stats:', error);
@@ -189,6 +220,7 @@ export const firestoreStorage = {
         read: 0,
         currentlyReading: 0,
         wantToRead: 0,
+        wishList: 0,
       };
     }
   },
@@ -277,5 +309,142 @@ export const firestoreStorage = {
     } catch (error) {
       console.error('Error migrating data from localStorage:', error);
     }
+  },
+
+  // WISH LIST METHODS
+  
+  // Get all wish list books from Firestore for current user
+  getWishListBooks: async (): Promise<WishListBook[]> => {
+    try {
+      const userId = getCurrentUserId();
+      const q = query(
+        collection(db, WISHLIST_COLLECTION_NAME),
+        where('userId', '==', userId),
+        orderBy('dateAdded', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(convertWishListFirestoreDoc);
+    } catch (error) {
+      console.error('Error loading wish list books from Firestore:', error);
+      return [];
+    }
+  },
+
+  // Add a new book to wish list for current user
+  addWishListBook: async (book: Omit<WishListBook, 'id' | 'dateAdded'>): Promise<WishListBook> => {
+    try {
+      const userId = getCurrentUserId();
+      const newBook = {
+        ...book,
+        dateAdded: new Date(),
+      };
+      
+      const docRef = await addDoc(collection(db, WISHLIST_COLLECTION_NAME), convertWishListToFirestoreDoc(newBook, userId));
+      
+      return {
+        id: docRef.id,
+        ...newBook,
+        userId,
+      };
+    } catch (error) {
+      console.error('Error adding book to wish list:', error);
+      throw error;
+    }
+  },
+
+  // Delete a book from wish list for current user
+  deleteWishListBook: async (id: string): Promise<boolean> => {
+    try {
+      const docRef = doc(db, WISHLIST_COLLECTION_NAME, id);
+      await deleteDoc(docRef);
+      return true;
+    } catch (error) {
+      console.error('Error deleting book from wish list:', error);
+      return false;
+    }
+  },
+
+  // Check if a book with the given ISBN already exists in wish list for current user
+  checkWishListBookExists: async (isbn: string): Promise<WishListBook | null> => {
+    try {
+      if (!isbn) return null;
+      
+      const userId = getCurrentUserId();
+      const q = query(
+        collection(db, WISHLIST_COLLECTION_NAME),
+        where('userId', '==', userId),
+        where('isbn', '==', isbn)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        // Return the first matching book
+        return convertWishListFirestoreDoc(querySnapshot.docs[0]);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error checking if wish list book exists:', error);
+      return null;
+    }
+  },
+
+  // Move a book from wish list to main collection
+  moveWishListBookToCollection: async (wishListBookId: string, status: ReadingStatus = 'want-to-read'): Promise<Book | null> => {
+    try {
+      // Get the wish list book
+      const wishListBooks = await firestoreStorage.getWishListBooks();
+      const wishListBook = wishListBooks.find(book => book.id === wishListBookId);
+      
+      if (!wishListBook) {
+        throw new Error('Wish list book not found');
+      }
+
+      // Create a new book object from wish list book
+      const newBook: Omit<Book, 'id' | 'dateAdded'> = {
+        title: wishListBook.title,
+        author: wishListBook.author,
+        isbn: wishListBook.isbn,
+        coverUrl: wishListBook.coverUrl,
+        pages: wishListBook.pages,
+        genre: wishListBook.genre,
+        status: status,
+        dateStarted: status === 'currently-reading' ? new Date() : undefined,
+        dateFinished: status === 'read' ? new Date() : undefined,
+      };
+
+      // Add to main collection
+      const addedBook = await firestoreStorage.addBook(newBook);
+      
+      // Remove from wish list
+      await firestoreStorage.deleteWishListBook(wishListBookId);
+      
+      return addedBook;
+    } catch (error) {
+      console.error('Error moving book from wish list to collection:', error);
+      return null;
+    }
+  },
+
+  // Set up real-time listener for wish list books for current user
+  onWishListBooksChange: (callback: (books: WishListBook[]) => void): (() => void) => {
+    const userId = getCurrentUserId();
+    const q = query(
+      collection(db, WISHLIST_COLLECTION_NAME),
+      where('userId', '==', userId),
+      orderBy('dateAdded', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const books = querySnapshot.docs.map(convertWishListFirestoreDoc);
+      callback(books);
+    }, (error) => {
+      console.error('Error in wish list books listener:', error);
+      callback([]);
+    });
+
+    return unsubscribe;
   },
 }; 

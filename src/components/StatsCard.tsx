@@ -4,7 +4,7 @@ interface StatsCardProps {
   title: string;
   value: number;
   icon: LucideIcon;
-  color: 'blue' | 'red' | 'orange' | 'green';
+  color: 'blue' | 'red' | 'orange' | 'green' | 'purple';
 }
 
 const colorVariants = {
@@ -27,6 +27,11 @@ const colorVariants = {
     bg: 'from-green-500 to-emerald-600',
     text: 'text-green-600',
     bgLight: 'bg-green-50',
+  },
+  purple: {
+    bg: 'from-purple-500 to-purple-600',
+    text: 'text-purple-600',
+    bgLight: 'bg-purple-50',
   },
 };
 

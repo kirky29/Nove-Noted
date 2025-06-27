@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Camera, AlertCircle, BookOpen, Plus, Loader2, FlipHorizontal } from 'lucide-react';
+import { X, Camera, AlertCircle, BookOpen, Plus, Loader2, FlipHorizontal, Star } from 'lucide-react';
 import Webcam from 'react-webcam';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { googleBooksAPI, BookSearchResult } from '@/utils/googleBooks';
-import { Book, ReadingStatus } from '@/types/book';
+import { Book, ReadingStatus, WishListBook } from '@/types/book';
 import { firestoreStorage } from '@/utils/firestoreStorage';
 import Image from 'next/image';
 
@@ -13,11 +13,13 @@ interface BarcodeScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddBook: (book: Omit<Book, 'id' | 'dateAdded'>) => void;
+  onAddToWishList: (book: Omit<WishListBook, 'id' | 'dateAdded'>) => void;
 }
 
-export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: BarcodeScannerModalProps) {
+export default function BarcodeScannerModal({ isOpen, onClose, onAddBook, onAddToWishList }: BarcodeScannerModalProps) {
   const [scannedBook, setScannedBook] = useState<BookSearchResult | null>(null);
   const [existingBook, setExistingBook] = useState<Book | null>(null);
+  const [existingWishListBook, setExistingWishListBook] = useState<WishListBook | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState<ReadingStatus>('want-to-read');
@@ -39,6 +41,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
       setError('');
       setScannedBook(null);
       setExistingBook(null);
+      setExistingWishListBook(null);
       setIsLoading(false);
     }
 
@@ -146,6 +149,12 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
         if (existingBookInLibrary) {
           setExistingBook(existingBookInLibrary);
         }
+
+        // Check if this book is in the wish list
+        const existingWishListBookFound = await firestoreStorage.checkWishListBookExists(foundBook.isbn || isbn);
+        if (existingWishListBookFound) {
+          setExistingWishListBook(existingWishListBookFound);
+        }
       } else {
         setError('Book not found. Try scanning again or search manually.');
         setTimeout(() => {
@@ -184,9 +193,29 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
     onClose();
   };
 
+  const handleAddToWishListAction = () => {
+    if (!scannedBook) return;
+
+    const wishListBookData: Omit<WishListBook, 'id' | 'dateAdded'> = {
+      title: scannedBook.title,
+      author: scannedBook.author,
+      isbn: scannedBook.isbn,
+      coverUrl: scannedBook.coverUrl,
+      pages: scannedBook.pages,
+      genre: scannedBook.genre,
+      publisher: scannedBook.publisher,
+      publishedYear: scannedBook.publishedYear,
+      description: scannedBook.description,
+    };
+
+    onAddToWishList(wishListBookData);
+    onClose();
+  };
+
   const handleScanAgain = () => {
     setScannedBook(null);
     setExistingBook(null);
+    setExistingWishListBook(null);
     setError('');
     setScanning(true);
     setIsLoading(false);
@@ -360,6 +389,16 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
                       This book is already in your library with status: <span className="font-medium">{existingBook.status.replace('-', ' ')}</span>.
                     </p>
                   </div>
+                ) : existingWishListBook ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Star className="h-5 w-5 text-blue-500" />
+                      <span className="font-medium text-blue-800">Already in Wish List!</span>
+                    </div>
+                    <p className="text-blue-700 text-sm">
+                      This book is already in your wish list.
+                    </p>
+                  </div>
                 ) : (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -412,12 +451,12 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
                 </div>
 
                 {/* Status Selection - Only show for new books */}
-                {!existingBook && (
+                {!existingBook && !existingWishListBook && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Reading Status
+                      Reading Status (for library)
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-2 mb-4">
                       {[
                         { value: 'want-to-read', label: 'Want to Read', color: 'border-red-200 bg-red-50 text-red-700' },
                         { value: 'currently-reading', label: 'Currently Reading', color: 'border-orange-200 bg-orange-50 text-orange-700' },
@@ -446,37 +485,68 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex gap-3">
+                <div className="space-y-3">
                   {existingBook ? (
                     <>
                       <button
                         onClick={onClose}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium"
                       >
                         <BookOpen className="h-4 w-4" />
                         View in Library
                       </button>
                       <button
                         onClick={handleScanAgain}
-                        className="px-4 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="w-full px-4 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                       >
-                        Scan Another
+                        Scan Another Book
+                      </button>
+                    </>
+                  ) : existingWishListBook ? (
+                    <>
+                      <button
+                        onClick={onClose}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all font-medium"
+                      >
+                        <Star className="h-4 w-4" />
+                        View in Wish List
+                      </button>
+                      <button
+                        onClick={handleScanAgain}
+                        className="w-full px-4 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Scan Another Book
                       </button>
                     </>
                   ) : (
                     <>
                       <button
+                        onClick={handleAddToWishListAction}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all font-medium"
+                      >
+                        <Star className="h-4 w-4" />
+                        Add to Wish List
+                      </button>
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-gray-200" />
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                          <span className="px-2 bg-white text-gray-500">or</span>
+                        </div>
+                      </div>
+                      <button
                         onClick={handleAddToLibrary}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-all font-medium"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-all font-medium"
                       >
                         <Plus className="h-4 w-4" />
                         Add to Library
                       </button>
                       <button
                         onClick={handleScanAgain}
-                        className="px-4 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="w-full px-4 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                       >
-                        Scan Again
+                        Scan Another Book
                       </button>
                     </>
                   )}

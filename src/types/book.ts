@@ -21,6 +21,21 @@ export interface Book {
   seriesNumber?: number; // Position in series
 }
 
+export interface WishListBook {
+  id: string;
+  title: string;
+  author: string;
+  isbn?: string;
+  coverUrl?: string;
+  pages?: number;
+  genre?: string;
+  publisher?: string;
+  publishedYear?: string;
+  description?: string;
+  dateAdded: Date;
+  userId?: string; // For Firebase user association
+}
+
 export interface SeriesBook {
   id: string;
   title: string;

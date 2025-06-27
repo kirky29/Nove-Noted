@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { Book, ReadingStatus } from '@/types/book';
+import { Book, ReadingStatus, WishListBook } from '@/types/book';
 import { googleBooksAPI, BookSearchResult } from '@/utils/googleBooks';
-import { X, Search, BookOpen, Calendar, Hash, Loader2, Plus } from 'lucide-react';
+import { X, Search, BookOpen, Calendar, Hash, Loader2, Plus, Star } from 'lucide-react';
 import Image from 'next/image';
 
 interface BookSearchModalProps {
   onClose: () => void;
   onAdd: (book: Omit<Book, 'id' | 'dateAdded'>) => void;
+  onAddToWishList: (book: Omit<WishListBook, 'id' | 'dateAdded'>) => void;
 }
 
-export default function BookSearchModal({ onClose, onAdd }: BookSearchModalProps) {
+export default function BookSearchModal({ onClose, onAdd, onAddToWishList }: BookSearchModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<BookSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -68,6 +69,24 @@ export default function BookSearchModal({ onClose, onAdd }: BookSearchModalProps
     };
 
     onAdd(bookData);
+  };
+
+  const handleAddToWishList = () => {
+    if (!selectedBook) return;
+
+    const wishListBookData: Omit<WishListBook, 'id' | 'dateAdded'> = {
+      title: selectedBook.title,
+      author: selectedBook.author,
+      isbn: selectedBook.isbn,
+      coverUrl: selectedBook.coverUrl,
+      pages: selectedBook.pages,
+      genre: selectedBook.genre,
+      publisher: selectedBook.publisher,
+      publishedYear: selectedBook.publishedYear,
+      description: selectedBook.description,
+    };
+
+    onAddToWishList(wishListBookData);
   };
 
   const truncateText = (text: string, maxLength: number) => {
@@ -272,49 +291,71 @@ export default function BookSearchModal({ onClose, onAdd }: BookSearchModalProps
                     </div>
                   )}
 
-                  {/* Status Selection */}
-                  <div>
-                    <h5 className="font-semibold text-gray-900 mb-3">Reading Status</h5>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { value: 'want-to-read', label: 'Want to Read', color: 'border-red-200 bg-red-50 text-red-700' },
-                        { value: 'currently-reading', label: 'Currently Reading', color: 'border-orange-200 bg-orange-50 text-orange-700' },
-                        { value: 'read', label: 'Read', color: 'border-green-200 bg-green-50 text-green-700' },
-                      ].map((statusOption) => (
-                        <label key={statusOption.value} className="cursor-pointer">
-                          <input
-                            type="radio"
-                            name="status"
-                            value={statusOption.value}
-                            checked={status === statusOption.value}
-                            onChange={(e) => setStatus(e.target.value as ReadingStatus)}
-                            className="sr-only"
-                          />
-                          <div className={`p-3 rounded-lg border-2 text-center text-xs font-medium transition-all ${
-                            status === statusOption.value 
-                              ? statusOption.color + ' ring-2 ring-offset-2'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}>
-                            {statusOption.label}
-                          </div>
-                        </label>
-                      ))}
+                  {/* Action Buttons */}
+                  <div className="space-y-3">
+                    {/* Add to Wish List Button */}
+                    <button
+                      onClick={handleAddToWishList}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
+                    >
+                      <Star className="h-5 w-5" />
+                      Add to Wish List
+                    </button>
+
+                    {/* Divider */}
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-200" />
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-gray-50 text-gray-500">or</span>
+                      </div>
+                    </div>
+
+                    {/* Status Selection for Library */}
+                    <div>
+                      <h5 className="font-semibold text-gray-900 mb-3">Add to Library with Status</h5>
+                      <div className="grid grid-cols-3 gap-2 mb-3">
+                        {[
+                          { value: 'want-to-read', label: 'Want to Read', color: 'border-red-200 bg-red-50 text-red-700' },
+                          { value: 'currently-reading', label: 'Currently Reading', color: 'border-orange-200 bg-orange-50 text-orange-700' },
+                          { value: 'read', label: 'Read', color: 'border-green-200 bg-green-50 text-green-700' },
+                        ].map((statusOption) => (
+                          <label key={statusOption.value} className="cursor-pointer">
+                            <input
+                              type="radio"
+                              name="status"
+                              value={statusOption.value}
+                              checked={status === statusOption.value}
+                              onChange={(e) => setStatus(e.target.value as ReadingStatus)}
+                              className="sr-only"
+                            />
+                            <div className={`p-3 rounded-lg border-2 text-center text-xs font-medium transition-all ${
+                              status === statusOption.value 
+                                ? statusOption.color + ' ring-2 ring-offset-2'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}>
+                              {statusOption.label}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+
+                      {/* Add to Library Button */}
+                      <button
+                        onClick={handleAddBook}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl hover:from-green-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl"
+                      >
+                        <Plus className="h-5 w-5" />
+                        Add to My Library
+                      </button>
                     </div>
                   </div>
-
-                  {/* Add Button */}
-                  <button
-                    onClick={handleAddBook}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl hover:from-green-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl"
-                  >
-                    <Plus className="h-5 w-5" />
-                    Add to My Library
-                  </button>
                 </div>
               ) : (
                 <div className="bg-gray-50 rounded-xl p-12 text-center">
                   <BookOpen className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                  <p className="text-gray-500">Select a book from the search results to preview and add it to your library.</p>
+                  <p className="text-gray-500">Select a book from the search results to preview and add it to your library or wish list.</p>
                 </div>
               )}
             </div>
