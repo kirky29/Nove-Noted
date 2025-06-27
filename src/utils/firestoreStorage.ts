@@ -335,20 +335,31 @@ export const firestoreStorage = {
   addWishListBook: async (book: Omit<WishListBook, 'id' | 'dateAdded'>): Promise<WishListBook> => {
     try {
       const userId = getCurrentUserId();
+      console.log('🔍 Firebase: Adding wish list book for user:', userId);
+      console.log('🔍 Firebase: Book data:', book);
+      
       const newBook = {
         ...book,
         dateAdded: new Date(),
       };
       
-      const docRef = await addDoc(collection(db, WISHLIST_COLLECTION_NAME), convertWishListToFirestoreDoc(newBook, userId));
+      const firestoreData = convertWishListToFirestoreDoc(newBook, userId);
+      console.log('🔍 Firebase: Converted Firestore data:', firestoreData);
       
-      return {
+      console.log('🔍 Firebase: Adding to collection:', WISHLIST_COLLECTION_NAME);
+      const docRef = await addDoc(collection(db, WISHLIST_COLLECTION_NAME), firestoreData);
+      console.log('✅ Firebase: Document added with ID:', docRef.id);
+      
+      const result = {
         id: docRef.id,
         ...newBook,
         userId,
       };
+      
+      console.log('✅ Firebase: Returning result:', result);
+      return result;
     } catch (error) {
-      console.error('Error adding book to wish list:', error);
+      console.error('❌ Firebase: Error adding book to wish list:', error);
       throw error;
     }
   },
@@ -431,6 +442,8 @@ export const firestoreStorage = {
   // Set up real-time listener for wish list books for current user
   onWishListBooksChange: (callback: (books: WishListBook[]) => void): (() => void) => {
     const userId = getCurrentUserId();
+    console.log('🔍 Firebase: Setting up wish list listener for user:', userId);
+    
     const q = query(
       collection(db, WISHLIST_COLLECTION_NAME),
       where('userId', '==', userId),
@@ -438,10 +451,12 @@ export const firestoreStorage = {
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      console.log('🔍 Firebase: Wish list snapshot received, docs count:', querySnapshot.docs.length);
       const books = querySnapshot.docs.map(convertWishListFirestoreDoc);
+      console.log('🔍 Firebase: Converted wish list books:', books);
       callback(books);
     }, (error) => {
-      console.error('Error in wish list books listener:', error);
+      console.error('❌ Firebase: Error in wish list books listener:', error);
       callback([]);
     });
 

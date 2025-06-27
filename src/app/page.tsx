@@ -86,11 +86,17 @@ export default function Home() {
   };
 
   const handleAddWishListBook = async (newBook: Omit<WishListBook, 'id' | 'dateAdded'>) => {
+    console.log('🔍 Adding book to wish list:', newBook);
     try {
-      await firestoreStorage.addWishListBook(newBook);
-      console.log('Book added to wish list successfully');
+      const result = await firestoreStorage.addWishListBook(newBook);
+      console.log('✅ Book added to wish list successfully:', result);
     } catch (error) {
-      console.error('Error adding book to wish list:', error);
+      console.error('❌ Error adding book to wish list:', error);
+      // Log the full error details
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
     }
   };
 
