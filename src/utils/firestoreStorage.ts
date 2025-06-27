@@ -193,6 +193,32 @@ export const firestoreStorage = {
     }
   },
 
+  // Check if a book with the given ISBN already exists for current user
+  checkBookExists: async (isbn: string): Promise<Book | null> => {
+    try {
+      if (!isbn) return null;
+      
+      const userId = getCurrentUserId();
+      const q = query(
+        collection(db, COLLECTION_NAME),
+        where('userId', '==', userId),
+        where('isbn', '==', isbn)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        // Return the first matching book
+        return convertFirestoreDoc(querySnapshot.docs[0]);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error checking if book exists:', error);
+      return null;
+    }
+  },
+
   // Set up real-time listener for books for current user
   onBooksChange: (callback: (books: Book[]) => void): (() => void) => {
     const userId = getCurrentUserId();

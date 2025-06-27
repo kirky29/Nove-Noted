@@ -6,6 +6,7 @@ import Webcam from 'react-webcam';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { googleBooksAPI, BookSearchResult } from '@/utils/googleBooks';
 import { Book, ReadingStatus } from '@/types/book';
+import { firestoreStorage } from '@/utils/firestoreStorage';
 import Image from 'next/image';
 
 interface BarcodeScannerModalProps {
@@ -16,6 +17,7 @@ interface BarcodeScannerModalProps {
 
 export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: BarcodeScannerModalProps) {
   const [scannedBook, setScannedBook] = useState<BookSearchResult | null>(null);
+  const [existingBook, setExistingBook] = useState<Book | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState<ReadingStatus>('want-to-read');
@@ -36,6 +38,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
       setScanning(true);
       setError('');
       setScannedBook(null);
+      setExistingBook(null);
       setIsLoading(false);
     }
 
@@ -134,7 +137,14 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
       const books = await googleBooksAPI.searchBooks(`isbn:${isbn}`, 1);
       
       if (books.length > 0) {
-        setScannedBook(books[0]);
+        const foundBook = books[0];
+        setScannedBook(foundBook);
+        
+        // Check if this book already exists in the user's library
+        const existingBookInLibrary = await firestoreStorage.checkBookExists(foundBook.isbn || isbn);
+        if (existingBookInLibrary) {
+          setExistingBook(existingBookInLibrary);
+        }
       } else {
         setError('Book not found. Try scanning again or search manually.');
         setTimeout(() => {
@@ -175,6 +185,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
 
   const handleScanAgain = () => {
     setScannedBook(null);
+    setExistingBook(null);
     setError('');
     setScanning(true);
     setIsLoading(false);
@@ -338,15 +349,27 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
           <div className="h-full bg-black/90 overflow-y-auto">
             <div className="min-h-full flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <BookOpen className="h-5 w-5 text-green-500" />
-                    <span className="font-medium text-green-800">Book Found!</span>
+                {existingBook ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className="h-5 w-5 text-yellow-500" />
+                      <span className="font-medium text-yellow-800">Already in Library!</span>
+                    </div>
+                    <p className="text-yellow-700 text-sm">
+                      This book is already in your library with status: <span className="font-medium">{existingBook.status.replace('-', ' ')}</span>.
+                    </p>
                   </div>
-                  <p className="text-green-700 text-sm">
-                    We found a match for the scanned barcode.
-                  </p>
-                </div>
+                ) : (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <BookOpen className="h-5 w-5 text-green-500" />
+                      <span className="font-medium text-green-800">Book Found!</span>
+                    </div>
+                    <p className="text-green-700 text-sm">
+                      We found a match for the scanned barcode.
+                    </p>
+                  </div>
+                )}
 
                 {/* Book Preview */}
                 <div className="bg-gray-50 rounded-lg p-4">
@@ -387,53 +410,75 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
                   </div>
                 </div>
 
-                {/* Status Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Reading Status
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: 'want-to-read', label: 'Want to Read', color: 'border-red-200 bg-red-50 text-red-700' },
-                      { value: 'currently-reading', label: 'Currently Reading', color: 'border-orange-200 bg-orange-50 text-orange-700' },
-                      { value: 'read', label: 'Read', color: 'border-green-200 bg-green-50 text-green-700' },
-                    ].map((statusOption) => (
-                      <label key={statusOption.value} className="cursor-pointer">
-                        <input
-                          type="radio"
-                          name="status"
-                          value={statusOption.value}
-                          checked={status === statusOption.value}
-                          onChange={(e) => setStatus(e.target.value as ReadingStatus)}
-                          className="sr-only"
-                        />
-                        <div className={`p-2 rounded-lg border-2 text-center text-xs font-medium transition-all ${
-                          status === statusOption.value 
-                            ? statusOption.color + ' ring-2 ring-offset-2'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}>
-                          {statusOption.label}
-                        </div>
-                      </label>
-                    ))}
+                {/* Status Selection - Only show for new books */}
+                {!existingBook && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Reading Status
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: 'want-to-read', label: 'Want to Read', color: 'border-red-200 bg-red-50 text-red-700' },
+                        { value: 'currently-reading', label: 'Currently Reading', color: 'border-orange-200 bg-orange-50 text-orange-700' },
+                        { value: 'read', label: 'Read', color: 'border-green-200 bg-green-50 text-green-700' },
+                      ].map((statusOption) => (
+                        <label key={statusOption.value} className="cursor-pointer">
+                          <input
+                            type="radio"
+                            name="status"
+                            value={statusOption.value}
+                            checked={status === statusOption.value}
+                            onChange={(e) => setStatus(e.target.value as ReadingStatus)}
+                            className="sr-only"
+                          />
+                          <div className={`p-2 rounded-lg border-2 text-center text-xs font-medium transition-all ${
+                            status === statusOption.value 
+                              ? statusOption.color + ' ring-2 ring-offset-2'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}>
+                            {statusOption.label}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex gap-3">
-                  <button
-                    onClick={handleAddToLibrary}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-all font-medium"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add to Library
-                  </button>
-                  <button
-                    onClick={handleScanAgain}
-                    className="px-4 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Scan Again
-                  </button>
+                  {existingBook ? (
+                    <>
+                      <button
+                        onClick={onClose}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium"
+                      >
+                        <BookOpen className="h-4 w-4" />
+                        View in Library
+                      </button>
+                      <button
+                        onClick={handleScanAgain}
+                        className="px-4 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Scan Another
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleAddToLibrary}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-all font-medium"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add to Library
+                      </button>
+                      <button
+                        onClick={handleScanAgain}
+                        className="px-4 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Scan Again
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
