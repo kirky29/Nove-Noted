@@ -16,6 +16,7 @@ export interface Book {
   thoughts?: string;
   notes?: string;
   currentPage?: number;
+  userId?: string; // For Firebase user association
 }
 
 export interface BookFilters {

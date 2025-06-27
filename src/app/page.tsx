@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Book, ReadingStatus } from '@/types/book';
-import { storage } from '@/utils/storage';
+import { firestoreStorage } from '@/utils/firestoreStorage';
 import { BookOpen, Plus, Clock, CheckCircle2, Heart, Search } from 'lucide-react';
 import BookCard from '@/components/BookCard';
 import AddBookModal from '@/components/AddBookModal';
@@ -25,36 +25,74 @@ export default function HomePage() {
     wantToRead: 0,
   });
 
-  // Load books on component mount
+  // Load books on component mount and set up real-time listener
   useEffect(() => {
-    const loadedBooks = storage.getBooks();
-    setBooks(loadedBooks);
-    setStats(storage.getReadingStats());
+    let unsubscribe: (() => void) | undefined;
+
+    const initializeData = async () => {
+      try {
+        // Migrate localStorage data to Firestore if needed
+        await firestoreStorage.migrateFromLocalStorage();
+        
+        // Set up real-time listener for books
+        unsubscribe = firestoreStorage.onBooksChange(async (books) => {
+          setBooks(books);
+          // Recalculate stats when books change
+          const stats = await firestoreStorage.getReadingStats();
+          setStats(stats);
+        });
+      } catch (error) {
+        console.error('Error initializing data:', error);
+        // Fallback to loading books once if real-time fails
+        const books = await firestoreStorage.getBooks();
+        setBooks(books);
+        const stats = await firestoreStorage.getReadingStats();
+        setStats(stats);
+      }
+    };
+
+    initializeData();
+
+    // Cleanup listener on component unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   // Handle adding a new book (from both modals)
-  const handleAddBook = (bookData: Omit<Book, 'id' | 'dateAdded'>) => {
-    const newBook = storage.addBook(bookData);
-    setBooks(prev => [...prev, newBook]);
-    setStats(storage.getReadingStats());
-    setIsAddModalOpen(false);
-    setIsSearchModalOpen(false);
+  const handleAddBook = async (bookData: Omit<Book, 'id' | 'dateAdded'>) => {
+    try {
+      await firestoreStorage.addBook(bookData);
+      // Real-time listener will update the UI automatically
+      setIsAddModalOpen(false);
+      setIsSearchModalOpen(false);
+    } catch (error) {
+      console.error('Error adding book:', error);
+      // You could show a toast notification here
+    }
   };
 
   // Handle updating a book
-  const handleUpdateBook = (id: string, updates: Partial<Book>) => {
-    const updatedBook = storage.updateBook(id, updates);
-    if (updatedBook) {
-      setBooks(prev => prev.map(book => book.id === id ? updatedBook : book));
-      setStats(storage.getReadingStats());
+  const handleUpdateBook = async (id: string, updates: Partial<Book>) => {
+    try {
+      await firestoreStorage.updateBook(id, updates);
+      // Real-time listener will update the UI automatically
+    } catch (error) {
+      console.error('Error updating book:', error);
+      // You could show a toast notification here
     }
   };
 
   // Handle deleting a book
-  const handleDeleteBook = (id: string) => {
-    if (storage.deleteBook(id)) {
-      setBooks(prev => prev.filter(book => book.id !== id));
-      setStats(storage.getReadingStats());
+  const handleDeleteBook = async (id: string) => {
+    try {
+      await firestoreStorage.deleteBook(id);
+      // Real-time listener will update the UI automatically
+    } catch (error) {
+      console.error('Error deleting book:', error);
+      // You could show a toast notification here
     }
   };
 
