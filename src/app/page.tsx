@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginPage from '@/components/LoginPage';
 import BookCard from '@/components/BookCard';
@@ -127,9 +128,11 @@ export default function Home() {
               >
                 <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
                   {user.photoURL ? (
-                    <img
+                    <Image
                       src={user.photoURL}
                       alt={user.displayName || 'User'}
+                      width={32}
+                      height={32}
                       className="w-8 h-8 rounded-full"
                     />
                   ) : (

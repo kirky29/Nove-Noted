@@ -131,7 +131,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
             <div className="space-y-4">
               <div className="text-center">
                 <p className="text-gray-600 mb-4">
-                  Point your camera at the book's barcode
+                  Point your camera at the book&apos;s barcode
                 </p>
               </div>
 
@@ -140,12 +140,12 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
                 <BarcodeScannerComponent
                   width="100%"
                   height="100%"
-                  onUpdate={(err: any, result: any) => {
+                  onUpdate={(err: unknown, result?: { getText: () => string }) => {
                     if (result) {
                       handleBarcodeScan(result.getText());
                     }
                     if (err) {
-                      handleScanError(err.message);
+                      handleScanError(String(err));
                     }
                   }}
                 />
