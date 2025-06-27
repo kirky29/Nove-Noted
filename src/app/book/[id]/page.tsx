@@ -7,7 +7,7 @@ import { Book, ReadingStatus } from '@/types/book';
 import { firestoreStorage } from '@/utils/firestoreStorage';
 import { 
   ArrowLeft, BookOpen, Calendar, Hash, Star, Edit3, Trash2, 
-  Plus, Save, Clock, CheckCircle2, Heart,
+  Plus, Clock, CheckCircle2, Heart,
   FileText, MessageSquare, Target, User, LogOut, ChevronDown
 } from 'lucide-react';
 import { format } from 'date-fns';

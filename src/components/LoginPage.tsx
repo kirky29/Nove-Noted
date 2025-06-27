@@ -50,16 +50,16 @@ export default function LoginPage() {
         await resetPassword(formData.email);
         setMessage('Password reset email sent! Check your inbox.');
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError((error as Error).message);
     }
   };
 
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError((error as Error).message);
     }
   };
 
@@ -254,7 +254,7 @@ export default function LoginPage() {
           {mode === 'signin' && (
             <div className="space-y-2">
               <p className="text-white/60">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <button
                   onClick={() => switchMode('signup')}
                   className="text-blue-300 hover:text-blue-200 font-medium"

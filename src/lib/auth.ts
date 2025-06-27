@@ -29,8 +29,8 @@ export const authService = {
         displayName: result.user.displayName,
         photoURL: result.user.photoURL,
       };
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to sign in');
+    } catch (error: unknown) {
+      throw new Error((error as Error).message || 'Failed to sign in');
     }
   },
 
@@ -50,8 +50,8 @@ export const authService = {
         displayName: displayName,
         photoURL: result.user.photoURL,
       };
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to create account');
+    } catch (error: unknown) {
+      throw new Error((error as Error).message || 'Failed to create account');
     }
   },
 
@@ -67,8 +67,8 @@ export const authService = {
         displayName: result.user.displayName,
         photoURL: result.user.photoURL,
       };
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to sign in with Google');
+    } catch (error: unknown) {
+      throw new Error((error as Error).message || 'Failed to sign in with Google');
     }
   },
 
@@ -76,8 +76,8 @@ export const authService = {
   signOut: async (): Promise<void> => {
     try {
       await signOut(auth);
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to sign out');
+    } catch (error: unknown) {
+      throw new Error((error as Error).message || 'Failed to sign out');
     }
   },
 
@@ -85,8 +85,8 @@ export const authService = {
   resetPassword: async (email: string): Promise<void> => {
     try {
       await sendPasswordResetEmail(auth, email);
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to send password reset email');
+    } catch (error: unknown) {
+      throw new Error((error as Error).message || 'Failed to send password reset email');
     }
   },
 
