@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Camera, AlertCircle, BookOpen, Plus, Loader2 } from 'lucide-react';
-import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 import { googleBooksAPI, BookSearchResult } from '@/utils/googleBooks';
 import { Book, ReadingStatus } from '@/types/book';
 import Image from 'next/image';
@@ -23,6 +23,62 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
   // html5-qrcode handles camera selection internally
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const scannerId = 'qr-code-scanner';
+
+  const handleBarcodeScan = useCallback(async (result: string) => {
+    if (!result || isLoading) return;
+    
+    setIsLoading(true);
+    setScanning(false);
+    setError('');
+
+    try {
+      // Clean the scanned result (remove any extra characters)
+      const isbn = result.replace(/[^\d]/g, '');
+      
+      if (isbn.length < 10) {
+        setError('Invalid barcode. Please try scanning again.');
+        setScanning(true);
+        setIsLoading(false);
+        setTimeout(() => {
+          if (!scannedBook) {
+            // Restart scanning after error
+            setScanning(true);
+          }
+        }, 1000);
+        return;
+      }
+
+      // Search for book by ISBN
+      const books = await googleBooksAPI.searchBooks(`isbn:${isbn}`, 1);
+      
+      if (books.length > 0) {
+        setScannedBook(books[0]);
+        // Stop scanning when book is found
+        await stopScanning();
+      } else {
+        setError('Book not found. Try scanning again or search manually.');
+        setScanning(true);
+        setTimeout(() => {
+          if (!scannedBook) {
+            // Restart scanning after error
+            setScanning(true);
+          }
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error searching for book:', error);
+      setError('Error searching for book. Please try again.');
+      setScanning(true);
+      setTimeout(() => {
+        if (!scannedBook) {
+          // Restart scanning after error
+          setScanning(true);
+        }
+      }, 1000);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isLoading, scannedBook]);
 
   const startScanning = useCallback(() => {
     // Clean up any existing scanner
@@ -75,7 +131,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
       console.error('Scanner initialization error:', err);
       handleScanError(err instanceof Error ? err.message : String(err));
     }
-  }, [scannerId]);
+  }, [scannerId, handleBarcodeScan]);
 
   useEffect(() => {
     if (isOpen) {
@@ -85,7 +141,6 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
       setScanning(true);
       setIsLoading(false);
       setHasCamera(true);
-      startScanning();
     } else {
       stopScanning();
     }
@@ -93,7 +148,14 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
     return () => {
       stopScanning();
     };
-  }, [isOpen, startScanning]);
+  }, [isOpen]);
+
+  // Separate effect to handle starting scanning when state changes
+  useEffect(() => {
+    if (isOpen && scanning && !scannedBook && !error) {
+      startScanning();
+    }
+  }, [isOpen, scanning, scannedBook, error, startScanning]);
 
   const stopScanning = async () => {
     if (scannerRef.current) {
@@ -106,52 +168,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
     }
   };
 
-  const handleBarcodeScan = async (result: string) => {
-    if (!result || isLoading) return;
-    
-    setIsLoading(true);
-    setScanning(false);
-    setError('');
 
-    try {
-      // Clean the scanned result (remove any extra characters)
-      const isbn = result.replace(/[^\d]/g, '');
-      
-      if (isbn.length < 10) {
-        setError('Invalid barcode. Please try scanning again.');
-        setScanning(true);
-        setIsLoading(false);
-        setTimeout(() => {
-          if (!scannedBook) startScanning();
-        }, 1000);
-        return;
-      }
-
-      // Search for book by ISBN
-      const books = await googleBooksAPI.searchBooks(`isbn:${isbn}`, 1);
-      
-      if (books.length > 0) {
-        setScannedBook(books[0]);
-        // Stop scanning when book is found
-        await stopScanning();
-      } else {
-        setError('Book not found. Try scanning again or search manually.');
-        setScanning(true);
-        setTimeout(() => {
-          if (!scannedBook) startScanning();
-        }, 1000);
-      }
-    } catch (error) {
-      console.error('Error searching for book:', error);
-      setError('Error searching for book. Please try again.');
-      setScanning(true);
-      setTimeout(() => {
-        if (!scannedBook) startScanning();
-      }, 1000);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleAddToLibrary = () => {
     if (!scannedBook) return;
@@ -177,7 +194,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
     setError('');
     setScanning(true);
     setIsLoading(false);
-    startScanning();
+    // scanning state change will trigger startScanning via useEffect
   };
 
   const handleScanError = (error: string) => {
