@@ -94,12 +94,12 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
   };
 
   const handleScanError = (error: string) => {
-    console.error('Scanner error:', error);
+    console.error('Scanner error details:', error);
     if (error.includes('camera') || error.includes('permission')) {
       setHasCamera(false);
       setError('Camera access denied. Please enable camera permissions and try again.');
     } else {
-      setError('Scanner error. Please try again.');
+      setError(`Scanner error: ${error}. Please try again.`);
     }
     setScanning(false);
   };
@@ -141,11 +141,14 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
                   width="100%"
                   height="100%"
                   onUpdate={(err: unknown, result?: { getText: () => string }) => {
+                    console.log('Scanner update:', { err, result });
                     if (result) {
+                      console.log('Barcode detected:', result.getText());
                       handleBarcodeScan(result.getText());
                     }
                     if (err) {
-                      handleScanError(String(err));
+                      console.error('Scanner callback error:', err);
+                      handleScanError(JSON.stringify(err) || String(err));
                     }
                   }}
                 />
