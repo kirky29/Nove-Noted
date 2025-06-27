@@ -123,7 +123,7 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
     if (activeTab === 'series' && seriesBooks.length === 0 && !loadingSeries) {
       loadSeriesBooks(book);
     }
-  }, [activeTab]);
+  }, [activeTab, book, seriesBooks.length, loadingSeries]);
 
   const StatusIcon = statusConfig[book.status].icon;
   const readingProgress = book.pages && book.currentPage 
@@ -518,7 +518,7 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {seriesBooks.map((seriesBook, index) => (
+                                         {seriesBooks.map((seriesBook) => (
                       <div 
                         key={seriesBook.id} 
                         className={`bg-white border rounded-lg p-4 transition-all hover:shadow-md ${
@@ -599,8 +599,8 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
                   <BookMarked className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <h3 className="font-medium text-gray-900 mb-2">No series books found</h3>
                   <p className="text-gray-600 text-sm max-w-md mx-auto">
-                    We couldn't find other books in this series. This might be a standalone book, 
-                    or the series information isn't clearly indicated in the title.
+                                         We couldn&apos;t find other books in this series. This might be a standalone book, 
+                     or the series information isn&apos;t clearly indicated in the title.
                   </p>
                   <button
                     onClick={() => loadSeriesBooks(book)}

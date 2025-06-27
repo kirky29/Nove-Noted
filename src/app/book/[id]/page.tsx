@@ -81,7 +81,7 @@ export default function BookProfilePage() {
     if (book && activeTab === 'series' && seriesBooks.length === 0 && !loadingSeries) {
       loadSeriesBooks(book);
     }
-  }, [book, activeTab]);
+  }, [book, activeTab, seriesBooks.length, loadingSeries]);
 
   if (!user) {
     return null;
@@ -228,9 +228,11 @@ export default function BookProfilePage() {
               >
                 <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
                   {user.photoURL ? (
-                    <img
+                    <Image
                       src={user.photoURL}
                       alt={user.displayName || 'User'}
+                      width={32}
+                      height={32}
                       className="w-8 h-8 rounded-full"
                     />
                   ) : (
@@ -637,7 +639,7 @@ export default function BookProfilePage() {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {seriesBooks.map((seriesBook, index) => (
+                    {seriesBooks.map((seriesBook) => (
                       <div 
                         key={seriesBook.id} 
                         className={`bg-white border rounded-lg p-4 transition-all hover:shadow-md ${
@@ -718,8 +720,8 @@ export default function BookProfilePage() {
                   <BookMarked className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <h3 className="font-medium text-gray-900 mb-2">No series books found</h3>
                   <p className="text-gray-600 text-sm max-w-md mx-auto">
-                    We couldn't find other books in this series. This might be a standalone book, 
-                    or the series information isn't clearly indicated in the title.
+                    We couldn&apos;t find other books in this series. This might be a standalone book, 
+                    or the series information isn&apos;t clearly indicated in the title.
                   </p>
                   <button
                     onClick={() => book && loadSeriesBooks(book)}

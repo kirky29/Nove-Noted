@@ -49,6 +49,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
     };
   }, [isOpen]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const scanFrame = useCallback(() => {
     if (!webcamRef.current || !readerRef.current || !scanning || scannedBook || isLoading) {
       return;

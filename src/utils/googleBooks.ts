@@ -199,7 +199,7 @@ export const googleBooksAPI = {
   // Search for books in the same series
   searchSeriesBooks: async (author: string, title: string, maxResults: number = 20): Promise<import('@/types/book').SeriesBook[]> => {
     try {
-      const { cleanTitle, series } = googleBooksAPI.extractSeriesInfo(title);
+      const { series } = googleBooksAPI.extractSeriesInfo(title);
       
       // If we detected a series, search for it specifically
       if (series) {
