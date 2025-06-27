@@ -15,13 +15,18 @@ import {
   QueryDocumentSnapshot,
   UpdateData
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { Book, ReadingStatus } from '@/types/book';
 
 const COLLECTION_NAME = 'books';
 
-// For now, we'll use a default user ID - in future we can add authentication
-const DEFAULT_USER_ID = 'default-user';
+// Get current user ID or throw error if not authenticated
+const getCurrentUserId = (): string => {
+  if (!auth.currentUser) {
+    throw new Error('User must be authenticated');
+  }
+  return auth.currentUser.uid;
+};
 
 // Convert Firestore document to Book object
 const convertFirestoreDoc = (doc: QueryDocumentSnapshot<DocumentData>): Book => {
@@ -42,28 +47,29 @@ const convertFirestoreDoc = (doc: QueryDocumentSnapshot<DocumentData>): Book => 
     thoughts: data.thoughts,
     notes: data.notes,
     currentPage: data.currentPage,
-    userId: data.userId || DEFAULT_USER_ID,
+    userId: data.userId,
   };
 };
 
 // Convert Book object to Firestore document
-const convertToFirestoreDoc = (book: Omit<Book, 'id'>) => {
+const convertToFirestoreDoc = (book: Omit<Book, 'id'>, userId: string) => {
   return {
     ...book,
     dateAdded: book.dateAdded ? Timestamp.fromDate(book.dateAdded) : Timestamp.now(),
     dateStarted: book.dateStarted ? Timestamp.fromDate(book.dateStarted) : null,
     dateFinished: book.dateFinished ? Timestamp.fromDate(book.dateFinished) : null,
-    userId: DEFAULT_USER_ID,
+    userId: userId,
   };
 };
 
 export const firestoreStorage = {
-  // Get all books from Firestore
+  // Get all books from Firestore for current user
   getBooks: async (): Promise<Book[]> => {
     try {
+      const userId = getCurrentUserId();
       const q = query(
         collection(db, COLLECTION_NAME),
-        where('userId', '==', DEFAULT_USER_ID),
+        where('userId', '==', userId),
         orderBy('dateAdded', 'desc')
       );
       
@@ -75,19 +81,21 @@ export const firestoreStorage = {
     }
   },
 
-  // Add a new book to Firestore
+  // Add a new book to Firestore for current user
   addBook: async (book: Omit<Book, 'id' | 'dateAdded'>): Promise<Book> => {
     try {
+      const userId = getCurrentUserId();
       const newBook = {
         ...book,
         dateAdded: new Date(),
       };
       
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), convertToFirestoreDoc(newBook));
+      const docRef = await addDoc(collection(db, COLLECTION_NAME), convertToFirestoreDoc(newBook, userId));
       
       return {
         id: docRef.id,
         ...newBook,
+        userId,
       };
     } catch (error) {
       console.error('Error adding book to Firestore:', error);
@@ -95,25 +103,34 @@ export const firestoreStorage = {
     }
   },
 
-  // Update an existing book in Firestore
+  // Update an existing book in Firestore for current user
   updateBook: async (id: string, updates: Partial<Book>): Promise<Book | null> => {
     try {
+      const userId = getCurrentUserId();
       const docRef = doc(db, COLLECTION_NAME, id);
       
-      // Convert date objects to Timestamps for Firestore
-      const firestoreUpdates = { ...updates } as UpdateData<DocumentData>;
-      if (updates.dateStarted) {
-        firestoreUpdates.dateStarted = Timestamp.fromDate(updates.dateStarted);
-      }
-      if (updates.dateFinished) {
-        firestoreUpdates.dateFinished = Timestamp.fromDate(updates.dateFinished);
-      }
+      // Filter out undefined values and convert date objects to Timestamps for Firestore
+      const firestoreUpdates = {} as UpdateData<DocumentData>;
+      
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== undefined) {
+          if (key === 'dateStarted' && value instanceof Date) {
+            firestoreUpdates.dateStarted = Timestamp.fromDate(value);
+          } else if (key === 'dateFinished' && value instanceof Date) {
+            firestoreUpdates.dateFinished = Timestamp.fromDate(value);
+          } else if (key === 'dateAdded' && value instanceof Date) {
+            firestoreUpdates.dateAdded = Timestamp.fromDate(value);
+          } else {
+            firestoreUpdates[key] = value;
+          }
+        }
+      });
       
       await updateDoc(docRef, firestoreUpdates);
       
       // Return the updated book (we'll need to fetch it)
       const booksCollection = collection(db, COLLECTION_NAME);
-      const q = query(booksCollection, where('userId', '==', DEFAULT_USER_ID));
+      const q = query(booksCollection, where('userId', '==', userId));
       const querySnapshot = await getDocs(q);
       const updatedDoc = querySnapshot.docs.find(doc => doc.id === id);
       
@@ -124,7 +141,7 @@ export const firestoreStorage = {
     }
   },
 
-  // Delete a book from Firestore
+  // Delete a book from Firestore for current user
   deleteBook: async (id: string): Promise<boolean> => {
     try {
       const docRef = doc(db, COLLECTION_NAME, id);
@@ -136,12 +153,13 @@ export const firestoreStorage = {
     }
   },
 
-  // Get books by status from Firestore
+  // Get books by status from Firestore for current user
   getBooksByStatus: async (status: ReadingStatus): Promise<Book[]> => {
     try {
+      const userId = getCurrentUserId();
       const q = query(
         collection(db, COLLECTION_NAME),
-        where('userId', '==', DEFAULT_USER_ID),
+        where('userId', '==', userId),
         where('status', '==', status),
         orderBy('dateAdded', 'desc')
       );
@@ -154,7 +172,7 @@ export const firestoreStorage = {
     }
   },
 
-  // Get reading statistics
+  // Get reading statistics for current user
   getReadingStats: async () => {
     try {
       const books = await firestoreStorage.getBooks();
@@ -175,11 +193,12 @@ export const firestoreStorage = {
     }
   },
 
-  // Set up real-time listener for books
+  // Set up real-time listener for books for current user
   onBooksChange: (callback: (books: Book[]) => void): (() => void) => {
+    const userId = getCurrentUserId();
     const q = query(
       collection(db, COLLECTION_NAME),
-      where('userId', '==', DEFAULT_USER_ID),
+      where('userId', '==', userId),
       orderBy('dateAdded', 'desc')
     );
 
@@ -194,9 +213,11 @@ export const firestoreStorage = {
     return unsubscribe;
   },
 
-  // Migrate data from localStorage to Firestore (one-time operation)
+  // Migrate data from localStorage to Firestore for current user (one-time operation)
   migrateFromLocalStorage: async (): Promise<void> => {
     try {
+      const userId = getCurrentUserId();
+      
       // Check if we have localStorage data
       const localData = localStorage.getItem('novel-noted-books');
       if (!localData) return;
@@ -215,7 +236,7 @@ export const firestoreStorage = {
           dateAdded: book.dateAdded ? Timestamp.fromDate(new Date(book.dateAdded)) : Timestamp.now(),
           dateStarted: book.dateStarted ? Timestamp.fromDate(new Date(book.dateStarted)) : null,
           dateFinished: book.dateFinished ? Timestamp.fromDate(new Date(book.dateFinished)) : null,
-          userId: DEFAULT_USER_ID,
+          userId: userId,
         };
 
         const docRef = doc(collection(db, COLLECTION_NAME));

@@ -1,177 +1,198 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Book, ReadingStatus } from '@/types/book';
-import { firestoreStorage } from '@/utils/firestoreStorage';
-import { BookOpen, Plus, Clock, CheckCircle2, Heart, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import LoginPage from '@/components/LoginPage';
 import BookCard from '@/components/BookCard';
+import StatsCard from '@/components/StatsCard';
 import AddBookModal from '@/components/AddBookModal';
 import BookSearchModal from '@/components/BookSearchModal';
-import BookProfileModal from '@/components/BookProfileModal';
+import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import LocalSearchBar from '@/components/LocalSearchBar';
-import StatsCard from '@/components/StatsCard';
+import { Book, ReadingStatus } from '@/types/book';
+import { firestoreStorage } from '@/utils/firestoreStorage';
+import { 
+  Book as BookIcon, 
+  Plus, 
+  Search, 
+  User, 
+  LogOut, 
+  ChevronDown,
+  BookOpen,
+  CheckCircle2,
+  Heart,
+  FileText,
+  Camera
+} from 'lucide-react';
 
-export default function HomePage() {
+export default function Home() {
+  const router = useRouter();
+  const { user, signOut } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
+  const [activeTab, setActiveTab] = useState<ReadingStatus | 'all'>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [activeTab, setActiveTab] = useState<ReadingStatus | 'all'>('all');
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [stats, setStats] = useState({
-    total: 0,
-    read: 0,
-    currentlyReading: 0,
-    wantToRead: 0,
-  });
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
-  // Load books on component mount and set up real-time listener
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
+    if (user) {
+      const unsubscribe = firestoreStorage.onBooksChange((updatedBooks: Book[]) => {
+        setBooks(updatedBooks);
+      });
 
-    const initializeData = async () => {
-      try {
-        // Migrate localStorage data to Firestore if needed
-        await firestoreStorage.migrateFromLocalStorage();
-        
-        // Set up real-time listener for books
-        unsubscribe = firestoreStorage.onBooksChange(async (books) => {
-          setBooks(books);
-          // Recalculate stats when books change
-          const stats = await firestoreStorage.getReadingStats();
-          setStats(stats);
-        });
-      } catch (error) {
-        console.error('Error initializing data:', error);
-        // Fallback to loading books once if real-time fails
-        const books = await firestoreStorage.getBooks();
-        setBooks(books);
-        const stats = await firestoreStorage.getReadingStats();
-        setStats(stats);
-      }
-    };
-
-    initializeData();
-
-    // Cleanup listener on component unmount
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, []);
-
-  // Handle adding a new book (from both modals)
-  const handleAddBook = async (bookData: Omit<Book, 'id' | 'dateAdded'>) => {
-    try {
-      await firestoreStorage.addBook(bookData);
-      // Real-time listener will update the UI automatically
-      setIsAddModalOpen(false);
-      setIsSearchModalOpen(false);
-    } catch (error) {
-      console.error('Error adding book:', error);
-      // You could show a toast notification here
+      return unsubscribe;
     }
-  };
+  }, [user]);
 
-  // Handle updating a book
-  const handleUpdateBook = async (id: string, updates: Partial<Book>) => {
-    try {
-      await firestoreStorage.updateBook(id, updates);
-      // Real-time listener will update the UI automatically
-    } catch (error) {
-      console.error('Error updating book:', error);
-      // You could show a toast notification here
-    }
-  };
-
-  // Handle deleting a book
-  const handleDeleteBook = async (id: string) => {
-    try {
-      await firestoreStorage.deleteBook(id);
-      // Real-time listener will update the UI automatically
-    } catch (error) {
-      console.error('Error deleting book:', error);
-      // You could show a toast notification here
-    }
-  };
-
-  // Handle opening book profile
-  const handleOpenBookProfile = (book: Book) => {
-    setSelectedBook(book);
-  };
+  // Show login page if user is not authenticated
+  if (!user) {
+    return <LoginPage />;
+  }
 
   // Filter books based on active tab and search query
-  const filteredBooks = books
-    .filter(book => activeTab === 'all' || book.status === activeTab)
-    .filter(book => {
-      if (!searchQuery) return true;
-      const query = searchQuery.toLowerCase();
-      return (
-        book.title.toLowerCase().includes(query) ||
-        book.author.toLowerCase().includes(query) ||
-        book.genre?.toLowerCase().includes(query) ||
-        book.thoughts?.toLowerCase().includes(query) ||
-        book.notes?.toLowerCase().includes(query)
-      );
-    });
+  const filteredBooks = books.filter(book => {
+    const matchesTab = activeTab === 'all' || book.status === activeTab;
+    const matchesSearch = searchQuery === '' || 
+      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      book.author.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
+  const handleAddBook = async (newBook: Omit<Book, 'id' | 'dateAdded'>) => {
+    await firestoreStorage.addBook(newBook);
+  };
+
+  const handleUpdateBook = async (updatedBook: Book) => {
+    await firestoreStorage.updateBook(updatedBook.id, updatedBook);
+  };
+
+  const handleDeleteBook = async (bookId: string) => {
+    await firestoreStorage.deleteBook(bookId);
+  };
+
+  const getStats = () => {
+    const reading = books.filter(book => book.status === 'currently-reading').length;
+    const completed = books.filter(book => book.status === 'read').length;
+    const wantToRead = books.filter(book => book.status === 'want-to-read').length;
+    const totalPages = books
+      .filter(book => book.status === 'read')
+      .reduce((sum, book) => sum + (book.pages || 0), 0);
+
+    return { reading, completed, wantToRead, totalPages };
+  };
+
+  const stats = getStats();
+
+  const getTabCount = (tab: ReadingStatus | 'all') => {
+    if (tab === 'all') {
+      return books.length;
+    }
+    return books.filter(book => book.status === tab).length;
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   const tabs = [
-    { key: 'all' as const, label: 'All Books', icon: BookOpen, count: stats.total },
-    { key: 'want-to-read' as const, label: 'Want to Read', icon: Heart, count: stats.wantToRead },
-    { key: 'currently-reading' as const, label: 'Currently Reading', icon: Clock, count: stats.currentlyReading },
-    { key: 'read' as const, label: 'Read', icon: CheckCircle2, count: stats.read },
+    { key: 'all' as const, label: 'My Library', icon: '📚' },
+    { key: 'want-to-read' as const, label: 'Want to Read', icon: '📚' },
+    { key: 'currently-reading' as const, label: 'Currently Reading', icon: '📖' },
+    { key: 'read' as const, label: 'Read', icon: '✅' },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-100">
+      <header className="bg-white/10 backdrop-blur-lg border-b border-white/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl">
-                <BookOpen className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Novel Noted
-                </h1>
-                <p className="text-gray-600 text-sm">Track your reading journey</p>
-              </div>
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <BookIcon className="h-8 w-8 text-white mr-3" />
+              <h1 className="text-2xl font-bold text-white">Novel Noted</h1>
             </div>
             
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3">
+            {/* User Menu */}
+            <div className="relative">
               <button
-                onClick={() => setIsSearchModalOpen(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl hover:from-green-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center space-x-2 text-white hover:text-white/80 transition-colors"
               >
-                <Search className="h-5 w-5" />
-                <span className="hidden sm:inline">Search Books</span>
-                <span className="sm:hidden">Search</span>
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  {user.photoURL ? (
+                    <img
+                      src={user.photoURL}
+                      alt={user.displayName || 'User'}
+                      className="w-8 h-8 rounded-full"
+                    />
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
+                </div>
+                <span className="hidden sm:block">{user.displayName || user.email}</span>
+                <ChevronDown className="h-4 w-4" />
               </button>
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                <Plus className="h-5 w-5" />
-                <span className="hidden sm:inline">Add Manually</span>
-                <span className="sm:hidden">Add</span>
-              </button>
+
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white/10 backdrop-blur-lg rounded-lg shadow-lg border border-white/20 z-50">
+                  <div className="py-1">
+                    <div className="px-4 py-2 text-sm text-white/80 border-b border-white/10">
+                      {user.email}
+                    </div>
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center w-full px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Close user menu when clicking outside */}
+      {isUserMenuOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setIsUserMenuOpen(false)}
+        />
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-bold text-white mb-4">
+            Welcome back, {user.displayName?.split(' ')[0] || 'Reader'}!
+          </h1>
+          <p className="text-xl text-white/80 mb-8">
+            Track your reading journey and discover new worlds
+          </p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <StatsCard
-            title="Total Books"
-            value={stats.total}
+            title="Currently Reading"
+            value={stats.reading}
             icon={BookOpen}
             color="blue"
+          />
+          <StatsCard
+            title="Books Completed"
+            value={stats.completed}
+            icon={CheckCircle2}
+            color="green"
           />
           <StatsCard
             title="Want to Read"
@@ -180,122 +201,105 @@ export default function HomePage() {
             color="red"
           />
           <StatsCard
-            title="Currently Reading"
-            value={stats.currentlyReading}
-            icon={Clock}
+            title="Pages Read"
+            value={stats.totalPages}
+            icon={FileText}
             color="orange"
           />
-          <StatsCard
-            title="Books Read"
-            value={stats.read}
-            icon={CheckCircle2}
-            color="green"
-          />
         </div>
 
-        {/* Search Bar */}
-        {books.length > 0 && (
-          <div className="mb-6">
-            <LocalSearchBar
-              onSearch={setSearchQuery}
-              placeholder="Search your library by title, author, genre, or notes..."
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center justify-center px-6 py-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg hover:from-green-600 hover:to-blue-700 transition-all duration-200 shadow-lg"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Add Book
+          </button>
+          <button
+            onClick={() => setIsSearchModalOpen(true)}
+            className="flex items-center justify-center px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all duration-200 shadow-lg"
+          >
+            <Search className="h-5 w-5 mr-2" />
+            Search Books
+          </button>
+          <button
+            onClick={() => setIsScanModalOpen(true)}
+            className="flex items-center justify-center px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:from-orange-600 hover:to-red-700 transition-all duration-200 shadow-lg"
+          >
+            <Camera className="h-5 w-5 mr-2" />
+            Scan Barcode
+          </button>
+        </div>
+
+        {/* Search and Tabs */}
+        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 mb-8">
+          <LocalSearchBar
+            onSearch={setSearchQuery}
+            placeholder="Search your library..."
+          />
+          
+          <div className="flex flex-wrap gap-2 mt-6">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 ${
+                  activeTab === tab.key
+                    ? 'bg-white/20 text-white shadow-lg'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+                <span className="bg-white/20 px-2 py-1 rounded-full text-xs">
+                  {getTabCount(tab.key)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Books Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredBooks.map((book) => (
+            <BookCard
+              key={book.id}
+              book={book}
+              onUpdate={(id, updates) => handleUpdateBook({ ...book, ...updates })}
+              onDelete={handleDeleteBook}
+              onOpenProfile={() => router.push(`/book/${book.id}`)}
             />
-          </div>
-        )}
+          ))}
+        </div>
 
-        {/* Tabs */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8">
-          <div className="border-b border-gray-100">
-            <nav className="flex space-x-8 px-6" aria-label="Tabs">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`flex items-center gap-2 py-4 px-1 font-medium text-sm border-b-2 transition-colors ${
-                      isActive
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {tab.label}
-                    <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
-                      isActive 
-                        ? 'bg-blue-100 text-blue-600' 
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {tab.count}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Books Grid */}
-          <div className="p-6">
-            {filteredBooks.length === 0 ? (
-              <div className="text-center py-12">
-                <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {searchQuery 
-                    ? `No books found matching ${searchQuery}`
-                    : activeTab === 'all' 
-                      ? 'No books yet' 
-                      : `No books in ${tabs.find(t => t.key === activeTab)?.label || ''}`
-                  }
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  {searchQuery 
-                    ? 'Try a different search term or browse all books.'
-                    : activeTab === 'all' 
-                      ? 'Start building your personal library by adding your first book!'
-                      : 'Books you add to this category will appear here.'
-                  }
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <button
-                    onClick={() => setIsSearchModalOpen(true)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl hover:from-green-700 hover:to-blue-700 transition-all duration-200"
-                  >
-                    <Search className="h-5 w-5" />
-                    Search & Add Books
-                  </button>
-                  <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
-                  >
-                    <Plus className="h-5 w-5" />
-                    Add Manually
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                {searchQuery && (
-                  <div className="mb-4 text-sm text-gray-600">
-                    Found {filteredBooks.length} book{filteredBooks.length !== 1 ? 's' : ''} matching &ldquo;{searchQuery}&rdquo;
-                  </div>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredBooks.map((book) => (
-                  <BookCard
-                    key={book.id}
-                    book={book}
-                    onUpdate={handleUpdateBook}
-                    onDelete={handleDeleteBook}
-                    onOpenProfile={handleOpenBookProfile}
-                  />
-                ))}
-                </div>
-              </div>
+        {/* Empty State */}
+        {filteredBooks.length === 0 && (
+          <div className="text-center py-16">
+            <BookIcon className="h-16 w-16 text-white/40 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">
+              {searchQuery ? 'No books found' : 'No books in this category'}
+            </h3>
+            <p className="text-white/60 mb-6">
+              {searchQuery 
+                ? `No books match "${searchQuery}"`
+                : activeTab === 'all' 
+                  ? 'Start building your personal library by adding your first book!'
+                  : `Add some books to your ${activeTab.replace('-', ' ')} list!`
+              }
+            </p>
+            {!searchQuery && (
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg hover:from-green-600 hover:to-blue-700 transition-all duration-200"
+              >
+                Add Your First Book
+              </button>
             )}
           </div>
-        </div>
-      </main>
+        )}
+      </div>
 
       {/* Modals */}
       {isAddModalOpen && (
@@ -304,7 +308,7 @@ export default function HomePage() {
           onAdd={handleAddBook}
         />
       )}
-      
+
       {isSearchModalOpen && (
         <BookSearchModal
           onClose={() => setIsSearchModalOpen(false)}
@@ -312,14 +316,11 @@ export default function HomePage() {
         />
       )}
 
-      {selectedBook && (
-        <BookProfileModal
-          book={selectedBook}
-          onClose={() => setSelectedBook(null)}
-          onUpdate={handleUpdateBook}
-          onDelete={handleDeleteBook}
-        />
-      )}
+      <BarcodeScannerModal
+        isOpen={isScanModalOpen}
+        onClose={() => setIsScanModalOpen(false)}
+        onAddBook={handleAddBook}
+      />
     </div>
   );
 }
