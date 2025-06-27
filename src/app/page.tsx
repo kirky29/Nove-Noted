@@ -3,15 +3,19 @@
 import { useState, useEffect } from 'react';
 import { Book, ReadingStatus } from '@/types/book';
 import { storage } from '@/utils/storage';
-import { BookOpen, Plus, Clock, CheckCircle2, Heart } from 'lucide-react';
+import { BookOpen, Plus, Clock, CheckCircle2, Heart, Search } from 'lucide-react';
 import BookCard from '@/components/BookCard';
 import AddBookModal from '@/components/AddBookModal';
+import BookSearchModal from '@/components/BookSearchModal';
+import LocalSearchBar from '@/components/LocalSearchBar';
 import StatsCard from '@/components/StatsCard';
 
 export default function HomePage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ReadingStatus | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({
     total: 0,
     read: 0,
@@ -26,12 +30,13 @@ export default function HomePage() {
     setStats(storage.getReadingStats());
   }, []);
 
-  // Handle adding a new book
+  // Handle adding a new book (from both modals)
   const handleAddBook = (bookData: Omit<Book, 'id' | 'dateAdded'>) => {
     const newBook = storage.addBook(bookData);
     setBooks(prev => [...prev, newBook]);
     setStats(storage.getReadingStats());
     setIsAddModalOpen(false);
+    setIsSearchModalOpen(false);
   };
 
   // Handle updating a book
@@ -51,10 +56,20 @@ export default function HomePage() {
     }
   };
 
-  // Filter books based on active tab
-  const filteredBooks = activeTab === 'all' 
-    ? books 
-    : books.filter(book => book.status === activeTab);
+  // Filter books based on active tab and search query
+  const filteredBooks = books
+    .filter(book => activeTab === 'all' || book.status === activeTab)
+    .filter(book => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        book.title.toLowerCase().includes(query) ||
+        book.author.toLowerCase().includes(query) ||
+        book.genre?.toLowerCase().includes(query) ||
+        book.thoughts?.toLowerCase().includes(query) ||
+        book.notes?.toLowerCase().includes(query)
+      );
+    });
 
   const tabs = [
     { key: 'all' as const, label: 'All Books', icon: BookOpen, count: stats.total },
@@ -80,13 +95,26 @@ export default function HomePage() {
                 <p className="text-gray-600 text-sm">Track your reading journey</p>
               </div>
             </div>
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <Plus className="h-5 w-5" />
-              Add Book
-            </button>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsSearchModalOpen(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl hover:from-green-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <Search className="h-5 w-5" />
+                <span className="hidden sm:inline">Search Books</span>
+                <span className="sm:hidden">Search</span>
+              </button>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <Plus className="h-5 w-5" />
+                <span className="hidden sm:inline">Add Manually</span>
+                <span className="sm:hidden">Add</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -119,6 +147,16 @@ export default function HomePage() {
             color="green"
           />
         </div>
+
+        {/* Search Bar */}
+        {books.length > 0 && (
+          <div className="mb-6">
+            <LocalSearchBar
+              onSearch={setSearchQuery}
+              placeholder="Search your library by title, author, genre, or notes..."
+            />
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8">
@@ -158,24 +196,46 @@ export default function HomePage() {
               <div className="text-center py-12">
                 <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {activeTab === 'all' ? 'No books yet' : `No books in "${tabs.find(t => t.key === activeTab)?.label}"`}
+                  {searchQuery 
+                    ? `No books found matching ${searchQuery}`
+                    : activeTab === 'all' 
+                      ? 'No books yet' 
+                      : `No books in ${tabs.find(t => t.key === activeTab)?.label || ''}`
+                  }
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  {activeTab === 'all' 
-                    ? 'Start building your personal library by adding your first book!'
-                    : 'Books you add to this category will appear here.'
+                  {searchQuery 
+                    ? 'Try a different search term or browse all books.'
+                    : activeTab === 'all' 
+                      ? 'Start building your personal library by adding your first book!'
+                      : 'Books you add to this category will appear here.'
                   }
                 </p>
-                <button
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
-                >
-                  <Plus className="h-5 w-5" />
-                  Add Your First Book
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={() => setIsSearchModalOpen(true)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl hover:from-green-700 hover:to-blue-700 transition-all duration-200"
+                  >
+                    <Search className="h-5 w-5" />
+                    Search & Add Books
+                  </button>
+                  <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+                  >
+                    <Plus className="h-5 w-5" />
+                    Add Manually
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div>
+                {searchQuery && (
+                  <div className="mb-4 text-sm text-gray-600">
+                    Found {filteredBooks.length} book{filteredBooks.length !== 1 ? 's' : ''} matching &ldquo;{searchQuery}&rdquo;
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredBooks.map((book) => (
                   <BookCard
                     key={book.id}
@@ -184,16 +244,24 @@ export default function HomePage() {
                     onDelete={handleDeleteBook}
                   />
                 ))}
+                </div>
               </div>
             )}
           </div>
         </div>
       </main>
 
-      {/* Add Book Modal */}
+      {/* Modals */}
       {isAddModalOpen && (
         <AddBookModal
           onClose={() => setIsAddModalOpen(false)}
+          onAdd={handleAddBook}
+        />
+      )}
+      
+      {isSearchModalOpen && (
+        <BookSearchModal
+          onClose={() => setIsSearchModalOpen(false)}
           onAdd={handleAddBook}
         />
       )}
