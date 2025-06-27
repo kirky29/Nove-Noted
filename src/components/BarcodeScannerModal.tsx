@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Camera, AlertCircle, BookOpen, Plus, Loader2 } from 'lucide-react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { X, Camera, AlertCircle, BookOpen, Plus, Loader2, FlipHorizontal } from 'lucide-react';
+import Webcam from 'react-webcam';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 import { googleBooksAPI, BookSearchResult } from '@/utils/googleBooks';
 import { Book, ReadingStatus } from '@/types/book';
 import Image from 'next/image';
@@ -20,15 +21,100 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
   const [status, setStatus] = useState<ReadingStatus>('want-to-read');
   const [hasCamera, setHasCamera] = useState(true);
   const [scanning, setScanning] = useState(true);
-  // html5-qrcode handles camera selection internally
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
-  const scannerId = 'qr-code-scanner';
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment'); // Back camera by default
+  const [lastScanTime, setLastScanTime] = useState(0);
+  
+  const webcamRef = useRef<Webcam>(null);
+  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize barcode reader
+  useEffect(() => {
+    if (isOpen) {
+      readerRef.current = new BrowserMultiFormatReader();
+      setHasCamera(true);
+      setScanning(true);
+      setError('');
+      setScannedBook(null);
+      setIsLoading(false);
+    }
+
+    return () => {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+      }
+    };
+  }, [isOpen]);
+
+  const scanFrame = useCallback(() => {
+    if (!webcamRef.current || !readerRef.current || !scanning || scannedBook || isLoading) {
+      return;
+    }
+
+    try {
+      const canvas = webcamRef.current.getCanvas();
+      if (!canvas) return;
+
+      // Prevent too frequent scans
+      const now = Date.now();
+      if (now - lastScanTime < 1000) return;
+
+      try {
+        const result = readerRef.current.decodeFromCanvas(canvas);
+        if (result && result.getText()) {
+          setLastScanTime(now);
+          handleBarcodeScan(result.getText());
+        }
+      } catch (err: unknown) {
+        // Ignore common "not found" errors - they're normal when no barcode is found
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (!errorMessage.includes('not found') && !errorMessage.includes('No QR')) {
+          console.warn('Scan error:', err);
+        }
+      }
+    } catch (err) {
+      console.warn('Frame capture error:', err);
+    }
+  }, [scanning, scannedBook, isLoading, lastScanTime]);
+
+  // Start scanning when camera is ready
+  useEffect(() => {
+    if (isOpen && scanning && !scannedBook && !error && hasCamera) {
+      // Clear any existing interval
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+      }
+
+      // Start scanning every 500ms
+      scanIntervalRef.current = setInterval(() => {
+        scanFrame();
+      }, 500);
+    }
+
+    return () => {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+      }
+    };
+  }, [isOpen, scanning, scannedBook, error, hasCamera, scanFrame]);
 
   const handleBarcodeScan = useCallback(async (result: string) => {
-    if (!result || isLoading) return;
+    if (!result || isLoading || scannedBook) return;
+    
+    console.log('✅ Barcode detected:', result);
+    
+    // Stop scanning
+    setScanning(false);
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+    }
+
+    // Provide haptic feedback
+    if (navigator.vibrate) {
+      navigator.vibrate(200);
+    }
     
     setIsLoading(true);
-    setScanning(false);
     setError('');
 
     try {
@@ -37,14 +123,10 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
       
       if (isbn.length < 10) {
         setError('Invalid barcode. Please try scanning again.');
-        setScanning(true);
-        setIsLoading(false);
         setTimeout(() => {
-          if (!scannedBook) {
-            // Restart scanning after error
-            setScanning(true);
-          }
-        }, 1000);
+          setScanning(true);
+          setIsLoading(false);
+        }, 2000);
         return;
       }
 
@@ -53,122 +135,24 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
       
       if (books.length > 0) {
         setScannedBook(books[0]);
-        // Stop scanning when book is found
-        await stopScanning();
       } else {
         setError('Book not found. Try scanning again or search manually.');
-        setScanning(true);
         setTimeout(() => {
-          if (!scannedBook) {
-            // Restart scanning after error
-            setScanning(true);
-          }
-        }, 1000);
+          setScanning(true);
+          setIsLoading(false);
+        }, 2000);
       }
     } catch (error) {
       console.error('Error searching for book:', error);
       setError('Error searching for book. Please try again.');
-      setScanning(true);
       setTimeout(() => {
-        if (!scannedBook) {
-          // Restart scanning after error
-          setScanning(true);
-        }
-      }, 1000);
+        setScanning(true);
+        setIsLoading(false);
+      }, 2000);
     } finally {
       setIsLoading(false);
     }
   }, [isLoading, scannedBook]);
-
-  const startScanning = useCallback(() => {
-    // Clean up any existing scanner
-    stopScanning();
-
-    try {
-      // Get viewport dimensions for responsive qrbox
-      const viewportWidth = Math.min(window.innerWidth - 40, 350);
-      const qrboxSize = Math.min(viewportWidth * 0.9, 280);
-      
-      const config = {
-        fps: 10,
-        qrbox: { width: qrboxSize, height: Math.round(qrboxSize * 0.6) }, // Wider rectangle for barcode scanning
-        aspectRatio: 1.0,
-        showTorchButtonIfSupported: true, // Show flashlight if available
-        showZoomSliderIfSupported: true, // Show zoom if available
-        defaultZoomValueIfSupported: 2, // Default zoom level
-        disableFlip: false, // Allow camera flip
-        rememberLastUsedCamera: true // Remember camera choice
-      };
-
-      const scanner = new Html5QrcodeScanner(
-        scannerId,
-        config,
-        true // verbose logging enabled to help debug
-      );
-
-      scannerRef.current = scanner;
-
-      scanner.render(
-        (decodedText) => {
-          console.log('✅ Barcode/QR detected:', decodedText);
-          // Provide haptic feedback on successful scan (if supported)
-          if (navigator.vibrate) {
-            navigator.vibrate(200);
-          }
-          handleBarcodeScan(decodedText);
-        },
-        (errorMessage) => {
-          // This gets called for every failed scan attempt, which is normal
-          // Only log real errors, not the constant "No QR code found" messages
-          if (!errorMessage.includes('No QR code found') && 
-              !errorMessage.includes('QR code parse error') &&
-              !errorMessage.includes('NotFoundException')) {
-            console.warn('Scanner warning:', errorMessage);
-          }
-        }
-      );
-    } catch (err) {
-      console.error('Scanner initialization error:', err);
-      handleScanError(err instanceof Error ? err.message : String(err));
-    }
-  }, [scannerId, handleBarcodeScan]);
-
-  useEffect(() => {
-    if (isOpen) {
-      // Reset state when modal opens
-      setScannedBook(null);
-      setError('');
-      setScanning(true);
-      setIsLoading(false);
-      setHasCamera(true);
-    } else {
-      stopScanning();
-    }
-
-    return () => {
-      stopScanning();
-    };
-  }, [isOpen]);
-
-  // Separate effect to handle starting scanning when state changes
-  useEffect(() => {
-    if (isOpen && scanning && !scannedBook && !error) {
-      startScanning();
-    }
-  }, [isOpen, scanning, scannedBook, error, startScanning]);
-
-  const stopScanning = async () => {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.clear();
-        scannerRef.current = null;
-      } catch (err) {
-        console.log('Scanner cleanup error (ignored):', err);
-      }
-    }
-  };
-
-
 
   const handleAddToLibrary = () => {
     if (!scannedBook) return;
@@ -194,24 +178,25 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
     setError('');
     setScanning(true);
     setIsLoading(false);
-    // scanning state change will trigger startScanning via useEffect
+    setLastScanTime(0);
   };
 
-  const handleScanError = (error: string) => {
-    console.error('Scanner error details:', error);
-    if (error.includes('camera') || error.includes('permission') || error.includes('NotAllowedError')) {
-      setHasCamera(false);
-      setError('Camera access denied. Please enable camera permissions and try again.');
-    } else if (error.includes('NotFoundError') || error.includes('No camera')) {
-      setHasCamera(false);
-      setError('No camera found. Please make sure your device has a camera.');
-    } else {
-      setError(`Scanner error: ${error}. Please try again.`);
-    }
-    setScanning(false);
+  const toggleCamera = () => {
+    setFacingMode(facingMode === 'environment' ? 'user' : 'environment');
   };
 
-  // Camera switching is handled by html5-qrcode internally
+  const handleCameraError = (error: string | DOMException) => {
+    console.error('Camera error:', error);
+    setHasCamera(false);
+    setError('Unable to access camera. Please check permissions and try again.');
+  };
+
+  const videoConstraints = {
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    facingMode: facingMode,
+    aspectRatio: { ideal: 16/9 }
+  };
 
   if (!isOpen) return null;
 
@@ -226,6 +211,16 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
           <h2 className="text-lg font-semibold">Scan Book Barcode</h2>
         </div>
         <div className="flex items-center gap-2">
+          {/* Camera Toggle */}
+          {scanning && hasCamera && (
+            <button
+              onClick={toggleCamera}
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+              title={`Switch to ${facingMode === 'environment' ? 'front' : 'back'} camera`}
+            >
+              <FlipHorizontal className="h-5 w-5" />
+            </button>
+          )}
           <button
             onClick={onClose}
             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
@@ -235,31 +230,53 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook }: Barc
         </div>
       </div>
 
-      {/* Main content area - flex-1 to fill remaining space */}
+      {/* Main content area */}
       <div className="flex-1 relative overflow-hidden">
-        {/* Scanner Content */}
+        {/* Camera Feed */}
         {!scannedBook && scanning && hasCamera && (
           <div className="h-full flex flex-col">
-            <div className="text-center p-4 bg-black/60 text-white">
+            <div className="text-center p-4 bg-black/60 text-white relative z-10">
               <p className="text-sm">
                 Point your camera at the book&apos;s barcode
               </p>
               <p className="text-xs opacity-75 mt-1">
-                Use the controls below to switch cameras if needed
+                Using {facingMode === 'environment' ? 'back' : 'front'} camera
               </p>
             </div>
 
-            {/* Scanner Container - Takes full remaining space */}
-            <div id={scannerId} className="flex-1 w-full"></div>
-
-            {isLoading && (
-              <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                <div className="bg-white rounded-lg p-6 flex items-center gap-3">
-                  <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                  <span className="text-gray-900 font-medium">Searching for book...</span>
+            {/* Webcam Container */}
+            <div className="flex-1 relative bg-black">
+              <Webcam
+                ref={webcamRef}
+                audio={false}
+                screenshotFormat="image/jpeg"
+                videoConstraints={videoConstraints}
+                onUserMediaError={handleCameraError}
+                className="w-full h-full object-cover"
+              />
+              
+              {/* Scanning overlay */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="border-2 border-white/70 rounded-lg w-64 h-40 relative">
+                  <div className="absolute inset-0 border-2 border-green-400/80 rounded-lg animate-pulse"></div>
+                  <div className="absolute top-2 left-2 right-2 text-center">
+                    <span className="text-white text-xs bg-black/50 px-2 py-1 rounded">
+                      {scanning ? 'Scanning...' : 'Processing...'}
+                    </span>
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Loading overlay */}
+              {isLoading && (
+                <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                  <div className="bg-white rounded-lg p-6 flex items-center gap-3">
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                    <span className="text-gray-900 font-medium">Searching for book...</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
