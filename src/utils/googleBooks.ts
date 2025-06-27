@@ -146,4 +146,142 @@ export const googleBooksAPI = {
       return null;
     }
   },
+
+  // Extract series information from book title
+  extractSeriesInfo: (title: string): { cleanTitle: string; series?: string; seriesNumber?: number } => {
+    // Common patterns for series detection
+    const patterns = [
+      // "Title (Series Name #1)"
+      /^(.+?)\s*\(([^)]+?)\s*#(\d+)\)$/,
+      // "Title (Series Name Book 1)"
+      /^(.+?)\s*\(([^)]+?)\s*Book\s*(\d+)\)$/i,
+      // "Series Name #1: Title"
+      /^([^:]+?)\s*#(\d+):\s*(.+)$/,
+      // "Series Name Book 1: Title"
+      /^([^:]+?)\s*Book\s*(\d+):\s*(.+)$/i,
+      // "Title: Series Name #1"
+      /^(.+?):\s*([^:]+?)\s*#(\d+)$/,
+      // "Title - Series Name #1"
+      /^(.+?)\s*-\s*([^-]+?)\s*#(\d+)$/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = title.match(pattern);
+      if (match) {
+        if (pattern.source.includes('#(\\d+):')) {
+          // For patterns like "Series Name #1: Title"
+          return {
+            cleanTitle: match[3].trim(),
+            series: match[1].trim(),
+            seriesNumber: parseInt(match[2], 10),
+          };
+        } else if (pattern.source.includes('Book\\s*(\\d+):')) {
+          // For patterns like "Series Name Book 1: Title"
+          return {
+            cleanTitle: match[3].trim(),
+            series: match[1].trim(),
+            seriesNumber: parseInt(match[2], 10),
+          };
+        } else {
+          // For patterns like "Title (Series Name #1)"
+          return {
+            cleanTitle: match[1].trim(),
+            series: match[2].trim(),
+            seriesNumber: parseInt(match[3], 10),
+          };
+        }
+      }
+    }
+
+    return { cleanTitle: title };
+  },
+
+  // Search for books in the same series
+  searchSeriesBooks: async (author: string, title: string, maxResults: number = 20): Promise<import('@/types/book').SeriesBook[]> => {
+    try {
+      const { cleanTitle, series } = googleBooksAPI.extractSeriesInfo(title);
+      
+      // If we detected a series, search for it specifically
+      if (series) {
+        const seriesQuery = `inauthor:"${author}" "${series}"`;
+        const books = await googleBooksAPI.searchBooks(seriesQuery, maxResults);
+        
+        return books.map(book => {
+          const bookSeriesInfo = googleBooksAPI.extractSeriesInfo(book.title);
+          return {
+            id: book.id,
+            title: book.title,
+            author: book.author,
+            coverUrl: book.coverUrl,
+            publishedYear: book.publishedYear,
+            description: book.description,
+            seriesNumber: bookSeriesInfo.seriesNumber,
+            inLibrary: false, // Will be updated when checking against user's library
+          };
+        }).sort((a, b) => {
+          // Sort by series number if available, otherwise by title
+          if (a.seriesNumber && b.seriesNumber) {
+            return a.seriesNumber - b.seriesNumber;
+          }
+          if (a.seriesNumber && !b.seriesNumber) return -1;
+          if (!a.seriesNumber && b.seriesNumber) return 1;
+          return a.title.localeCompare(b.title);
+        });
+      }
+
+      // If no series detected, try searching for similar books by the author
+      const authorQuery = `inauthor:"${author}"`;
+      const books = await googleBooksAPI.searchBooks(authorQuery, maxResults);
+      
+      // Filter and find potentially related books
+      const potentialSeriesBooks = books.filter(book => {
+        const bookSeriesInfo = googleBooksAPI.extractSeriesInfo(book.title);
+        const currentBookInfo = googleBooksAPI.extractSeriesInfo(title);
+        
+        // Check if books might be in the same series
+        if (bookSeriesInfo.series && currentBookInfo.series) {
+          return bookSeriesInfo.series.toLowerCase().includes(currentBookInfo.series.toLowerCase()) ||
+                 currentBookInfo.series.toLowerCase().includes(bookSeriesInfo.series.toLowerCase());
+        }
+        
+        // Look for similar title patterns
+        const cleanCurrentTitle = currentBookInfo.cleanTitle.toLowerCase();
+        const cleanBookTitle = bookSeriesInfo.cleanTitle.toLowerCase();
+        
+        // Check for common words or patterns
+        const currentWords = cleanCurrentTitle.split(' ').filter(word => word.length > 3);
+        const bookWords = cleanBookTitle.split(' ').filter(word => word.length > 3);
+        
+        const commonWords = currentWords.filter(word => 
+          bookWords.some(bookWord => bookWord.includes(word) || word.includes(bookWord))
+        );
+        
+        return commonWords.length >= 1;
+      });
+
+      return potentialSeriesBooks.map(book => {
+        const bookSeriesInfo = googleBooksAPI.extractSeriesInfo(book.title);
+        return {
+          id: book.id,
+          title: book.title,
+          author: book.author,
+          coverUrl: book.coverUrl,
+          publishedYear: book.publishedYear,
+          description: book.description,
+          seriesNumber: bookSeriesInfo.seriesNumber,
+          inLibrary: false,
+        };
+      }).sort((a, b) => {
+        if (a.seriesNumber && b.seriesNumber) {
+          return a.seriesNumber - b.seriesNumber;
+        }
+        if (a.seriesNumber && !b.seriesNumber) return -1;
+        if (!a.seriesNumber && b.seriesNumber) return 1;
+        return a.title.localeCompare(b.title);
+      });
+    } catch (error) {
+      console.error('Error searching for series books:', error);
+      return [];
+    }
+  },
 }; 

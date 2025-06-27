@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { Book, ReadingStatus } from '@/types/book';
+import { useState, useEffect } from 'react';
+import { Book, ReadingStatus, SeriesBook } from '@/types/book';
+import { googleBooksAPI } from '@/utils/googleBooks';
+import { firestoreStorage } from '@/utils/firestoreStorage';
 import { 
   X, BookOpen, Calendar, Hash, Star, Edit3, Trash2, 
   Plus, Save, Clock, CheckCircle2, Heart,
-  FileText, MessageSquare, Target
+  FileText, MessageSquare, Target, BookMarked
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Image from 'next/image';
@@ -16,9 +18,11 @@ interface BookProfileModalProps {
 }
 
 export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: BookProfileModalProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'journey' | 'progress'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'journey' | 'progress' | 'series'>('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [newJourneyEntry, setNewJourneyEntry] = useState('');
+  const [seriesBooks, setSeriesBooks] = useState<SeriesBook[]>([]);
+  const [loadingSeries, setLoadingSeries] = useState(false);
 
   const statusConfig = {
     'want-to-read': {
@@ -91,6 +95,36 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
     setNewJourneyEntry('');
   };
 
+  const loadSeriesBooks = async (book: Book) => {
+    setLoadingSeries(true);
+    try {
+      const books = await googleBooksAPI.searchSeriesBooks(book.author, book.title);
+      
+      // Check which books are in user's library
+      const userBooks = await firestoreStorage.getBooks();
+      const booksWithLibraryStatus = books.map(seriesBook => ({
+        ...seriesBook,
+        inLibrary: userBooks.some(userBook => 
+          userBook.title.toLowerCase().includes(seriesBook.title.toLowerCase()) ||
+          seriesBook.title.toLowerCase().includes(userBook.title.toLowerCase())
+        )
+      }));
+
+      setSeriesBooks(booksWithLibraryStatus);
+    } catch (error) {
+      console.error('Error loading series books:', error);
+    } finally {
+      setLoadingSeries(false);
+    }
+  };
+
+  // Load series books when series tab becomes active
+  useEffect(() => {
+    if (activeTab === 'series' && seriesBooks.length === 0 && !loadingSeries) {
+      loadSeriesBooks(book);
+    }
+  }, [activeTab]);
+
   const StatusIcon = statusConfig[book.status].icon;
   const readingProgress = book.pages && book.currentPage 
     ? Math.min((book.currentPage / book.pages) * 100, 100) 
@@ -100,6 +134,7 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
     { key: 'overview', label: 'Overview', icon: BookOpen },
     { key: 'journey', label: 'My Journey', icon: MessageSquare },
     { key: 'progress', label: 'Progress', icon: Target },
+    { key: 'series', label: 'Books in this series', icon: BookMarked },
   ];
 
   return (
@@ -149,7 +184,7 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
               return (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveTab(tab.key as 'overview' | 'journey' | 'progress')}
+                  onClick={() => setActiveTab(tab.key as 'overview' | 'journey' | 'progress' | 'series')}
                   className={`flex items-center gap-2 py-4 px-4 font-medium text-sm border-b-2 transition-colors ${
                     isActive
                       ? 'border-blue-500 text-blue-600'
@@ -462,6 +497,119 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Series Tab */}
+          {activeTab === 'series' && (
+            <div className="space-y-6">
+              {loadingSeries ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Finding books in this series...</p>
+                </div>
+              ) : seriesBooks.length > 0 ? (
+                <div>
+                  <div className="flex items-center gap-2 mb-6">
+                    <BookMarked className="h-5 w-5 text-blue-600" />
+                    <h3 className="font-semibold text-gray-900">
+                      Books in this series ({seriesBooks.length} found)
+                    </h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {seriesBooks.map((seriesBook, index) => (
+                      <div 
+                        key={seriesBook.id} 
+                        className={`bg-white border rounded-lg p-4 transition-all hover:shadow-md ${
+                          seriesBook.inLibrary ? 'border-green-200 bg-green-50' : 'border-gray-200'
+                        }`}
+                      >
+                        <div className="flex gap-3">
+                          {/* Book Cover */}
+                          <div className="flex-shrink-0">
+                            {seriesBook.coverUrl ? (
+                              <Image
+                                src={seriesBook.coverUrl}
+                                alt={`${seriesBook.title} cover`}
+                                width={60}
+                                height={80}
+                                className="rounded object-cover shadow-sm"
+                              />
+                            ) : (
+                              <div className="w-15 h-20 bg-gray-200 rounded flex items-center justify-center">
+                                <BookOpen className="h-6 w-6 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Book Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <h4 className="font-medium text-gray-900 text-sm leading-tight line-clamp-2">
+                                {seriesBook.title}
+                              </h4>
+                              {seriesBook.seriesNumber && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 flex-shrink-0">
+                                  #{seriesBook.seriesNumber}
+                                </span>
+                              )}
+                            </div>
+                            
+                            <p className="text-xs text-gray-600 mt-1">{seriesBook.author}</p>
+                            
+                            {seriesBook.publishedYear && (
+                              <p className="text-xs text-gray-500 mt-1">{seriesBook.publishedYear}</p>
+                            )}
+
+                            {seriesBook.inLibrary && (
+                              <div className="flex items-center gap-1 mt-2">
+                                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                <span className="text-xs text-green-700 font-medium">In your library</span>
+                              </div>
+                            )}
+
+                            {seriesBook.description && (
+                              <p className="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed">
+                                {seriesBook.description.replace(/<[^>]*>/g, '').substring(0, 80)}
+                                {seriesBook.description.length > 80 ? '...' : ''}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <FileText className="h-4 w-4 text-blue-600 mt-0.5" />
+                      <div className="text-sm text-blue-800">
+                        <p className="font-medium mb-1">About this series reference</p>
+                        <p>
+                          These books were found based on the author and title patterns. Books marked with a green background 
+                          are already in your library. This is a reference to help you discover other books in the series.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <BookMarked className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <h3 className="font-medium text-gray-900 mb-2">No series books found</h3>
+                  <p className="text-gray-600 text-sm max-w-md mx-auto">
+                    We couldn't find other books in this series. This might be a standalone book, 
+                    or the series information isn't clearly indicated in the title.
+                  </p>
+                  <button
+                    onClick={() => loadSeriesBooks(book)}
+                    className="mt-4 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Try searching again
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

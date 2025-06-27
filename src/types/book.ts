@@ -17,6 +17,19 @@ export interface Book {
   notes?: string;
   currentPage?: number;
   userId?: string; // For Firebase user association
+  series?: string; // Series name if part of a series
+  seriesNumber?: number; // Position in series
+}
+
+export interface SeriesBook {
+  id: string;
+  title: string;
+  author: string;
+  coverUrl?: string;
+  publishedYear?: string;
+  description?: string;
+  seriesNumber?: number;
+  inLibrary?: boolean; // Whether user has this book in their library
 }
 
 export interface BookFilters {
