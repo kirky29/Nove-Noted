@@ -1,5 +1,5 @@
 import { Book } from '@/types/book';
-import { Star, Clock, CheckCircle2, Heart } from 'lucide-react';
+import { Star } from 'lucide-react';
 import Image from 'next/image';
 
 interface BookCardProps {
