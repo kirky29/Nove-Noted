@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Book, ReadingStatus } from '@/types/book';
-import { X, BookOpen, User, Hash, Image, FileText, Tag } from 'lucide-react';
+import { X, BookOpen, User, Hash, Image as IconImage, FileText, Tag } from 'lucide-react';
+import NextImage from 'next/image';
 
 interface AddBookModalProps {
   onClose: () => void;
@@ -152,7 +153,7 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
           {/* Cover URL */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-              <Image className="h-4 w-4" />
+              <IconImage className="h-4 w-4" />
               Cover Image URL
             </label>
             <input
@@ -163,6 +164,16 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
               placeholder="https://example.com/book-cover.jpg"
             />
           </div>
+
+          {formData.coverUrl && (
+            <NextImage
+              src={formData.coverUrl}
+              alt="Book cover preview"
+              width={80}
+              height={120}
+              className="rounded-md object-cover w-[80px] h-[120px]"
+            />
+          )}
 
           {/* Status */}
           <div>
