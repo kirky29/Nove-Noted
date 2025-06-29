@@ -41,6 +41,7 @@ const convertFirestoreDoc = (doc: QueryDocumentSnapshot<DocumentData>): Book => 
     pages: data.pages,
     genre: data.genre,
     status: data.status,
+    ownershipType: data.ownershipType || 'physical', // Default to physical for existing books
     dateAdded: data.dateAdded?.toDate() || new Date(),
     dateStarted: data.dateStarted?.toDate(),
     dateFinished: data.dateFinished?.toDate(),
@@ -420,6 +421,7 @@ export const firestoreStorage = {
         pages: wishListBook.pages,
         genre: wishListBook.genre,
         status: status,
+        ownershipType: 'physical', // Default to physical when moving from wish list
         dateStarted: status === 'currently-reading' ? new Date() : undefined,
         dateFinished: status === 'read' ? new Date() : undefined,
       };
