@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Book } from '@/types/book';
 import { Star, Clock, CheckCircle2, Heart } from 'lucide-react';
 import Image from 'next/image';
@@ -7,24 +6,6 @@ interface BookCardProps {
   book: Book;
   onUpdate: (id: string, updates: Partial<Book>) => void;
 }
-
-const statusConfig = {
-  'want-to-read': {
-    icon: Heart,
-    label: 'Want to Read',
-    color: 'text-red-600 bg-red-50',
-  },
-  'currently-reading': {
-    icon: Clock,
-    label: 'Currently Reading',
-    color: 'text-orange-600 bg-orange-50',
-  },
-  'read': {
-    icon: CheckCircle2,
-    label: 'Read',
-    color: 'text-green-600 bg-green-50',
-  },
-};
 
 export default function BookCard({ book, onUpdate }: BookCardProps) {
   const handleRatingChange = (rating: number) => {
