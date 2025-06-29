@@ -371,8 +371,6 @@ export default function Home() {
                 key={book.id}
                 book={book}
                 onUpdate={(id, updates) => handleUpdateBook({ ...book, ...updates })}
-                onDelete={handleDeleteBook}
-                onOpenProfile={() => router.push(`/book/${book.id}`)}
               />
             ))}
           </div>
