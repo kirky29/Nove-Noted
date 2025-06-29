@@ -312,18 +312,18 @@ export default function BookProfilePage() {
                 <div className="lg:col-span-1">
                   <div className="bg-gray-50 rounded-xl p-6">
                     {/* Cover */}
-                    <div className="mb-4">
+                    <div className="mb-6">
                       {book.coverUrl ? (
                         <Image
                           src={book.coverUrl}
                           alt={`${book.title} cover`}
-                          width={200}
-                          height={280}
-                          className="w-full max-w-48 mx-auto rounded-lg object-cover shadow-md"
+                          width={240}
+                          height={360}
+                          className="w-full max-w-[200px] sm:max-w-[240px] mx-auto rounded-xl object-cover shadow-lg hover:shadow-xl transition-shadow duration-300"
                         />
                       ) : (
-                        <div className="w-full max-w-48 h-64 mx-auto bg-gray-200 rounded-lg flex items-center justify-center">
-                          <BookOpen className="h-12 w-12 text-gray-400" />
+                        <div className="w-full max-w-[200px] sm:max-w-[240px] h-[300px] sm:h-[360px] mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center shadow-lg">
+                          <BookOpen className="h-16 w-16 text-gray-400" />
                         </div>
                       )}
                     </div>

@@ -142,11 +142,11 @@ export default function Home() {
   };
 
   const tabs = [
-    { key: 'all' as const, label: 'My Library', icon: '📚' },
-    { key: 'want-to-read' as const, label: 'Want to Read', icon: '📚' },
-    { key: 'currently-reading' as const, label: 'Currently Reading', icon: '📖' },
-    { key: 'read' as const, label: 'Read', icon: '✅' },
-    { key: 'wishlist' as const, label: 'Wish List', icon: '⭐' },
+    { key: 'all' as const, label: 'My Library', mobileLabel: 'Library', icon: '📚' },
+    { key: 'want-to-read' as const, label: 'Want to Read', mobileLabel: 'Want to Read', icon: '📚' },
+    { key: 'currently-reading' as const, label: 'Currently Reading', mobileLabel: 'Reading', icon: '📖' },
+    { key: 'read' as const, label: 'Read', mobileLabel: 'Read', icon: '✅' },
+    { key: 'wishlist' as const, label: 'Wish List', mobileLabel: 'Wish List', icon: '⭐' },
   ];
 
   return (
@@ -265,19 +265,25 @@ export default function Home() {
             onSearch={setSearchQuery}
             placeholder={activeTab === 'wishlist' ? "Search your wish list..." : "Search your library..."}
           />
-          <div className="flex gap-2 overflow-x-auto mt-2 pb-2 hide-scrollbar border-b border-white/20">
+          <div className="flex gap-2 overflow-x-auto mt-3 pb-3 hide-scrollbar">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex flex-col items-center px-2 py-2 rounded-lg font-medium transition-all duration-200 text-sm min-w-[48px] ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition-all duration-200 text-sm whitespace-nowrap ${
                   activeTab === tab.key
-                    ? 'bg-white/20 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                    ? 'bg-white/20 text-white shadow-lg ring-1 ring-white/30'
+                    : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
                 }`}
               >
-                <span>{tab.icon}</span>
-                <span className="text-xs mt-1">{getTabCount(tab.key)}</span>
+                <span className="text-base">{tab.icon}</span>
+                <span className="font-medium">
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.mobileLabel}</span>
+                </span>
+                <span className="ml-1 px-2 py-0.5 bg-white/20 text-white text-xs rounded-full font-semibold">
+                  {getTabCount(tab.key)}
+                </span>
               </button>
             ))}
           </div>
@@ -286,9 +292,9 @@ export default function Home() {
         {/* Content based on active tab */}
         {activeTab === 'wishlist' ? (
           // Wish List Books Grid
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredWishListBooks.map((wishListBook) => (
-              <div key={wishListBook.id} className="bg-white rounded-lg p-2 sm:p-4 border border-gray-100">
+              <div key={wishListBook.id} className="bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20 hover:bg-white/15 transition-all duration-200">
                 <div className="flex gap-4">
                   {/* Book Cover */}
                   <div className="flex-shrink-0">
@@ -296,12 +302,12 @@ export default function Home() {
                       <Image
                         src={wishListBook.coverUrl}
                         alt={`${wishListBook.title} cover`}
-                        width={80}
-                        height={120}
-                        className="rounded-lg object-cover shadow-md"
+                        width={100}
+                        height={150}
+                        className="rounded-lg object-cover shadow-md w-[80px] h-[120px] sm:w-[100px] sm:h-[150px]"
                       />
                     ) : (
-                      <div className="w-20 h-30 bg-white/20 rounded-lg flex items-center justify-center">
+                      <div className="w-[80px] h-[120px] sm:w-[100px] sm:h-[150px] bg-white/20 rounded-lg flex items-center justify-center shadow-md">
                         <BookOpen className="h-8 w-8 text-white/60" />
                       </div>
                     )}
@@ -309,7 +315,7 @@ export default function Home() {
 
                   {/* Book Info */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-white text-sm leading-tight line-clamp-2 mb-1">
+                    <h3 className="font-semibold text-white text-sm sm:text-base leading-tight line-clamp-2 mb-2">
                       {wishListBook.title}
                     </h3>
                     <p className="text-white/70 text-sm mb-2">
@@ -317,7 +323,7 @@ export default function Home() {
                     </p>
                     
                     {wishListBook.publishedYear && (
-                      <p className="text-white/50 text-xs mb-2">{wishListBook.publishedYear}</p>
+                      <p className="text-white/50 text-xs mb-1">{wishListBook.publishedYear}</p>
                     )}
                     
                     {wishListBook.pages && (
@@ -328,7 +334,7 @@ export default function Home() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleMoveWishListBookToCollection(wishListBook.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-green-600/20 text-green-300 rounded-lg hover:bg-green-600/30 transition-colors text-xs"
+                        className="flex items-center gap-1 px-3 py-2 bg-green-600/20 text-green-300 rounded-lg hover:bg-green-600/30 transition-colors text-xs font-medium"
                         title="Add to collection"
                       >
                         <ArrowRight className="h-3 w-3" />
@@ -336,7 +342,7 @@ export default function Home() {
                       </button>
                       <button
                         onClick={() => handleDeleteWishListBook(wishListBook.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-red-600/20 text-red-300 rounded-lg hover:bg-red-600/30 transition-colors text-xs"
+                        className="flex items-center gap-1 px-3 py-2 bg-red-600/20 text-red-300 rounded-lg hover:bg-red-600/30 transition-colors text-xs font-medium"
                         title="Remove from wish list"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -348,8 +354,8 @@ export default function Home() {
 
                 {/* Description */}
                 {wishListBook.description && (
-                  <div className="mt-3 pt-3 border-t border-white/10">
-                    <p className="text-white/60 text-xs line-clamp-3 leading-relaxed">
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <p className="text-white/60 text-xs sm:text-sm line-clamp-3 leading-relaxed">
                       {wishListBook.description.replace(/<[^>]*>/g, '')}
                     </p>
                   </div>
@@ -358,8 +364,8 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          // Regular Books Grid
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+          // Regular Books Grid - Optimized for larger covers
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
             {filteredBooks.map((book) => (
               <BookCard
                 key={book.id}
