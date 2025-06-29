@@ -299,15 +299,15 @@ export default function Home() {
                   {/* Book Cover */}
                   <div className="flex-shrink-0">
                     {wishListBook.coverUrl ? (
-                      <Image
-                        src={wishListBook.coverUrl}
-                        alt={`${wishListBook.title} cover`}
-                        width={100}
-                        height={150}
-                        className="rounded-lg object-cover shadow-md w-[80px] h-[120px] sm:w-[100px] sm:h-[150px]"
-                      />
-                    ) : (
-                      <div className="w-[80px] h-[120px] sm:w-[100px] sm:h-[150px] bg-white/20 rounded-lg flex items-center justify-center shadow-md">
+                                              <Image
+                          src={wishListBook.coverUrl}
+                          alt={`${wishListBook.title} cover`}
+                          width={120}
+                          height={180}
+                          className="rounded-lg object-cover shadow-md w-[90px] h-[135px] sm:w-[110px] sm:h-[165px] hover:shadow-lg transition-shadow duration-200"
+                        />
+                      ) : (
+                        <div className="w-[90px] h-[135px] sm:w-[110px] sm:h-[165px] bg-white/20 rounded-lg flex items-center justify-center shadow-md hover:shadow-lg transition-shadow duration-200">
                         <BookOpen className="h-8 w-8 text-white/60" />
                       </div>
                     )}
@@ -365,7 +365,7 @@ export default function Home() {
           </div>
         ) : (
           // Regular Books Grid - Optimized for larger covers
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
             {filteredBooks.map((book) => (
               <BookCard
                 key={book.id}

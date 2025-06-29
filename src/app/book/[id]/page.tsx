@@ -317,12 +317,12 @@ export default function BookProfilePage() {
                         <Image
                           src={book.coverUrl}
                           alt={`${book.title} cover`}
-                          width={240}
-                          height={360}
-                          className="w-full max-w-[200px] sm:max-w-[240px] mx-auto rounded-xl object-cover shadow-lg hover:shadow-xl transition-shadow duration-300"
+                          width={280}
+                          height={420}
+                          className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[280px] mx-auto rounded-xl object-cover shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
                         />
                       ) : (
-                        <div className="w-full max-w-[200px] sm:max-w-[240px] h-[300px] sm:h-[360px] mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center shadow-lg">
+                        <div className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[280px] h-[330px] sm:h-[390px] lg:h-[420px] mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
                           <BookOpen className="h-16 w-16 text-gray-400" />
                         </div>
                       )}

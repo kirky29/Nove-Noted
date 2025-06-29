@@ -20,12 +20,12 @@ export default function BookCard({ book, onUpdate }: BookCardProps) {
           <Image
             src={book.coverUrl}
             alt={`${book.title} cover`}
-            width={140}
-            height={200}
-            className="rounded-lg object-cover w-[120px] h-[180px] sm:w-[140px] sm:h-[200px] shadow-md hover:shadow-lg transition-shadow duration-200"
+            width={180}
+            height={260}
+            className="rounded-lg object-cover w-[140px] h-[210px] sm:w-[160px] sm:h-[240px] lg:w-[180px] lg:h-[260px] shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
           />
         ) : (
-          <div className="w-[120px] h-[180px] sm:w-[140px] sm:h-[200px] bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center shadow-md">
+          <div className="w-[140px] h-[210px] sm:w-[160px] sm:h-[240px] lg:w-[180px] lg:h-[260px] bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
             <span className="text-3xl text-gray-400">📚</span>
           </div>
         )}
