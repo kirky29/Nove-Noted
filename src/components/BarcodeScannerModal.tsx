@@ -185,6 +185,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook, onAddT
       pages: scannedBook.pages,
       genre: scannedBook.genre,
       status: status,
+      ownershipType: 'physical', // Default to physical when adding from barcode scanner
       dateStarted: status === 'currently-reading' ? new Date() : undefined,
       dateFinished: status === 'read' ? new Date() : undefined,
     };
