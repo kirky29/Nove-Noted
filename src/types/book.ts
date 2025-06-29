@@ -13,8 +13,6 @@ export interface Book {
   dateStarted?: Date;
   dateFinished?: Date;
   rating?: number; // 1-5 stars
-  thoughts?: string;
-  notes?: string;
   currentPage?: number;
   userId?: string; // For Firebase user association
   series?: string; // Series name if part of a series

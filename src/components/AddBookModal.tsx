@@ -17,8 +17,6 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
     genre: '',
     status: 'want-to-read' as ReadingStatus,
     rating: 0,
-    thoughts: '',
-    notes: '',
     currentPage: '',
   });
 
@@ -39,8 +37,6 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
       genre: formData.genre.trim() || undefined,
       status: formData.status,
       rating: formData.rating || undefined,
-      thoughts: formData.thoughts.trim() || undefined,
-      notes: formData.notes.trim() || undefined,
       currentPage: formData.currentPage ? parseInt(formData.currentPage) : undefined,
       dateStarted: formData.status === 'currently-reading' ? new Date() : undefined,
       dateFinished: formData.status === 'read' ? new Date() : undefined,
@@ -236,31 +232,6 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
               </div>
             </div>
           )}
-
-          {/* Thoughts & Notes */}
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Thoughts</label>
-              <textarea
-                value={formData.thoughts}
-                onChange={(e) => handleInputChange('thoughts', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                rows={3}
-                placeholder="What did you think about this book?"
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Notes</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                rows={3}
-                placeholder="Any additional notes or quotes..."
-              />
-            </div>
-          </div>
 
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-gray-100">

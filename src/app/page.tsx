@@ -218,99 +218,72 @@ export default function Home() {
         />
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Welcome Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-4">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2">
             Welcome back, {user.displayName?.split(' ')[0] || 'Reader'}!
           </h1>
-          <p className="text-xl text-white/80 mb-8">
-            Track your reading journey and discover new worlds
+          <p className="text-lg sm:text-xl text-white/80 mb-6">
+            Track your personal book collection and ratings
           </p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <StatsCard
-            title="Currently Reading"
-            value={stats.reading}
-            icon={BookOpen}
-            color="blue"
-          />
-          <StatsCard
-            title="Books Completed"
-            value={stats.completed}
-            icon={CheckCircle2}
-            color="green"
-          />
-          <StatsCard
-            title="Want to Read"
-            value={stats.wantToRead}
-            icon={Heart}
-            color="red"
-          />
-          <StatsCard
-            title="Wish List"
-            value={stats.wishList}
-            icon={Star}
-            color="purple"
-          />
-          <StatsCard
-            title="Pages Read"
-            value={stats.totalPages}
-            icon={FileText}
-            color="orange"
-          />
+        <div className="flex gap-2 overflow-x-auto mb-4 hide-scrollbar">
+          <div className="flex gap-2 min-w-max">
+            <StatsCard title="Currently Reading" value={stats.reading} icon={BookOpen} color="blue" />
+            <StatsCard title="Books Completed" value={stats.completed} icon={CheckCircle2} color="green" />
+            <StatsCard title="Want to Read" value={stats.wantToRead} icon={Heart} color="red" />
+            <StatsCard title="Wish List" value={stats.wishList} icon={Star} color="purple" />
+            <StatsCard title="Pages Read" value={stats.totalPages} icon={FileText} color="orange" />
+          </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="flex gap-2 mb-4">
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center justify-center px-6 py-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg hover:from-green-600 hover:to-blue-700 transition-all duration-200 shadow-lg"
+            className="flex-1 flex items-center justify-center px-2 py-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg hover:from-green-600 hover:to-blue-700 transition-all duration-200 shadow text-base font-medium"
           >
             <Plus className="h-5 w-5 mr-2" />
-            Add Book
+            Add
           </button>
           <button
             onClick={() => setIsSearchModalOpen(true)}
-            className="flex items-center justify-center px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all duration-200 shadow-lg"
+            className="flex-1 flex items-center justify-center px-2 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all duration-200 shadow"
           >
             <Search className="h-5 w-5 mr-2" />
-            Search Books
+            Search
           </button>
           <button
             onClick={() => setIsScanModalOpen(true)}
-            className="flex items-center justify-center px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:from-orange-600 hover:to-red-700 transition-all duration-200 shadow-lg"
+            className="flex-1 flex items-center justify-center px-2 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:from-orange-600 hover:to-red-700 transition-all duration-200 shadow"
           >
             <Camera className="h-5 w-5 mr-2" />
-            Scan Barcode
+            Scan
           </button>
         </div>
 
         {/* Search and Tabs */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 mb-8">
+        <div className="mb-4">
           <LocalSearchBar
             onSearch={setSearchQuery}
             placeholder={activeTab === 'wishlist' ? "Search your wish list..." : "Search your library..."}
           />
-          
-          <div className="flex flex-wrap gap-2 mt-6">
+          <div className="flex gap-2 overflow-x-auto mt-2 pb-2 hide-scrollbar border-b border-white/20">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 ${
+                className={`flex flex-col items-center px-2 py-2 rounded-lg font-medium transition-all duration-200 text-sm min-w-[48px] ${
                   activeTab === tab.key
                     ? 'bg-white/20 text-white shadow-lg'
                     : 'text-white/70 hover:text-white hover:bg-white/10'
                 }`}
               >
                 <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-                <span className="bg-white/20 px-2 py-1 rounded-full text-xs">
-                  {getTabCount(tab.key)}
-                </span>
+                <span className="text-xs mt-1">{getTabCount(tab.key)}</span>
               </button>
             ))}
           </div>
@@ -319,9 +292,9 @@ export default function Home() {
         {/* Content based on active tab */}
         {activeTab === 'wishlist' ? (
           // Wish List Books Grid
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
             {filteredWishListBooks.map((wishListBook) => (
-              <div key={wishListBook.id} className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-4 hover:bg-white/20 transition-all">
+              <div key={wishListBook.id} className="bg-white rounded-lg p-2 sm:p-4 border border-gray-100">
                 <div className="flex gap-4">
                   {/* Book Cover */}
                   <div className="flex-shrink-0">
@@ -392,7 +365,7 @@ export default function Home() {
           </div>
         ) : (
           // Regular Books Grid
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
             {filteredBooks.map((book) => (
               <BookCard
                 key={book.id}

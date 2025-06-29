@@ -39,15 +39,13 @@ export default function StatsCard({ title, value, icon: Icon, color }: StatsCard
   const colors = colorVariants[color];
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-900">{value}</p>
+    <div className="bg-white rounded-lg p-2 sm:p-4 shadow-sm border border-gray-100 min-w-[110px] flex flex-col items-center justify-center">
+      <div className="flex flex-col items-center">
+        <div className={`p-2 rounded-lg bg-gradient-to-r ${colors.bg} mb-1`}>
+          <Icon className="h-5 w-5 text-white" />
         </div>
-        <div className={`p-3 rounded-xl bg-gradient-to-r ${colors.bg}`}>
-          <Icon className="h-6 w-6 text-white" />
-        </div>
+        <p className="text-xs font-medium text-gray-600 mb-0.5 text-center">{title}</p>
+        <p className="text-xl font-bold text-gray-900 text-center">{value}</p>
       </div>
     </div>
   );

@@ -1,23 +1,22 @@
 # 📚 Novel Noted
 
-A beautiful, responsive web application for tracking your reading journey. Keep track of books you want to read, are currently reading, and have finished reading. Add your personal thoughts and create your digital reading journal.
+A beautiful, responsive web application for tracking your personal book collection. Keep track of the books you own with ratings and reading status.
 
 ![Novel Noted Preview](https://via.placeholder.com/800x400/4F46E5/FFFFFF?text=Novel+Noted+Preview)
 
 ## ✨ Features
 
-### 📖 Book Tracking
+### 📖 Book Collection Tracking
 - **Want to Read**: Build your reading wishlist
 - **Currently Reading**: Track books you're actively reading with progress bars
 - **Read**: Archive completed books with ratings and completion dates
 
-### 📝 Personal Journal
-- **Thoughts**: Add your personal thoughts and reviews for each book
-- **Notes**: Keep additional notes, quotes, or key takeaways
-- **Ratings**: Rate your finished books with a 5-star system
+### ⭐ Ratings & Reviews
+- **Star Ratings**: Rate your finished books with a 5-star system
+- **Reading Status**: Track whether you've read, are reading, or want to read each book
 
-### 📊 Reading Analytics
-- **Statistics Dashboard**: View your reading stats at a glance
+### 📊 Collection Analytics
+- **Statistics Dashboard**: View your collection stats at a glance
 - **Progress Tracking**: Visual progress bars for books you're currently reading
 - **Reading History**: Track when you started and finished each book
 
@@ -34,7 +33,7 @@ A beautiful, responsive web application for tracking your reading journey. Keep 
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) for responsive design
 - **Icons**: [Lucide React](https://lucide.dev/) for beautiful icons
 - **Date Handling**: [date-fns](https://date-fns.org/) for date formatting
-- **Storage**: localStorage for data persistence
+- **Storage**: Firebase Firestore for data persistence
 - **Deployment**: Ready for [Vercel](https://vercel.com/) deployment
 
 ## 🛠️ Getting Started

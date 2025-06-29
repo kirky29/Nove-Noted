@@ -8,8 +8,8 @@ import { firestoreStorage } from '@/utils/firestoreStorage';
 import { googleBooksAPI } from '@/utils/googleBooks';
 import { 
   ArrowLeft, BookOpen, Calendar, Hash, Star, Edit3, Trash2, 
-  Plus, Clock, CheckCircle2, Heart,
-  FileText, MessageSquare, Target, User, LogOut, ChevronDown, BookMarked
+  Clock, CheckCircle2, Heart,
+  FileText, Target, User, LogOut, ChevronDown, BookMarked
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Image from 'next/image';
@@ -20,9 +20,8 @@ export default function BookProfilePage() {
   const { user, signOut } = useAuth();
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'journey' | 'progress' | 'series'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'progress' | 'series'>('overview');
   const [isEditing, setIsEditing] = useState(false);
-  const [newJourneyEntry, setNewJourneyEntry] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [seriesBooks, setSeriesBooks] = useState<SeriesBook[]>([]);
   const [loadingSeries, setLoadingSeries] = useState(false);
@@ -158,21 +157,6 @@ export default function BookProfilePage() {
     }
   };
 
-  const addJourneyEntry = async () => {
-    if (!newJourneyEntry.trim()) return;
-    
-    const currentThoughts = book.thoughts || '';
-    const timestamp = format(new Date(), 'MMM d, yyyy');
-    const entry = `[${timestamp}] ${newJourneyEntry.trim()}`;
-    const updatedThoughts = currentThoughts 
-      ? `${currentThoughts}\n\n${entry}`
-      : entry;
-    
-    await firestoreStorage.updateBook(book.id, { thoughts: updatedThoughts });
-    setBook({ ...book, thoughts: updatedThoughts });
-    setNewJourneyEntry('');
-  };
-
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -189,7 +173,6 @@ export default function BookProfilePage() {
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: BookOpen },
-    { key: 'journey', label: 'My Journey', icon: MessageSquare },
     { key: 'progress', label: 'Progress', icon: Target },
     { key: 'series', label: 'Books in this series', icon: BookMarked },
   ];
@@ -304,7 +287,7 @@ export default function BookProfilePage() {
               return (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveTab(tab.key as 'overview' | 'journey' | 'progress' | 'series')}
+                  onClick={() => setActiveTab(tab.key as 'overview' | 'progress' | 'series')}
                   className={`flex items-center gap-2 py-4 px-4 font-medium text-sm border-b-2 transition-colors ${
                     isActive
                       ? 'border-blue-400 text-white'
@@ -484,67 +467,6 @@ export default function BookProfilePage() {
                   )}
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Journey Tab */}
-          {activeTab === 'journey' && (
-            <div className="space-y-6">
-              {/* Add New Entry */}
-              <div className="bg-amber-50 rounded-xl p-6 border border-amber-200">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <Plus className="h-5 w-5" />
-                  Add Journey Entry
-                </h3>
-                <div className="space-y-3">
-                  <textarea
-                    value={newJourneyEntry}
-                    onChange={(e) => setNewJourneyEntry(e.target.value)}
-                    placeholder="What are your thoughts about this book? Any quotes, insights, or reflections..."
-                    className="w-full px-4 py-3 border border-amber-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                    rows={3}
-                  />
-                  <button
-                    onClick={addJourneyEntry}
-                    disabled={!newJourneyEntry.trim()}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Entry
-                  </button>
-                </div>
-              </div>
-
-              {/* Existing Thoughts */}
-              {book.thoughts && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">My Journey</h3>
-                  <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                      {book.thoughts}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Notes */}
-              {book.notes && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">Notes</h3>
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                    <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                      {book.notes}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!book.thoughts && !book.notes && (
-                <div className="text-center py-12 text-gray-500">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                  <p>No journey entries yet. Start by adding your first thoughts!</p>
-                </div>
-              )}
             </div>
           )}
 

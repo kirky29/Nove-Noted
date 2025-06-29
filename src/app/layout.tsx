@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Novel Noted - Track Your Reading Journey",
-  description: "A beautiful, responsive web app for tracking books you've read, are currently reading, and want to read. Add your thoughts and create your personal reading journal.",
-  keywords: ["books", "reading", "tracker", "journal", "notes", "library"],
+  title: "Novel Noted - Your Personal Book Library",
+  description: "A beautiful, responsive web app for tracking the books you own. Keep track of your personal library with ratings and reading status.",
+  keywords: ["books", "library", "tracker", "collection", "ratings", "reading"],
   authors: [{ name: "Novel Noted" }],
   viewport: "width=device-width, initial-scale=1",
 };

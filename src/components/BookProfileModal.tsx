@@ -4,8 +4,8 @@ import { googleBooksAPI } from '@/utils/googleBooks';
 import { firestoreStorage } from '@/utils/firestoreStorage';
 import { 
   X, BookOpen, Calendar, Hash, Star, Edit3, Trash2, 
-  Plus, Save, Clock, CheckCircle2, Heart,
-  FileText, MessageSquare, Target, BookMarked
+  Save, Clock, CheckCircle2, Heart,
+  FileText, Target, BookMarked
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Image from 'next/image';
@@ -18,9 +18,8 @@ interface BookProfileModalProps {
 }
 
 export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: BookProfileModalProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'journey' | 'progress' | 'series'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'progress' | 'series'>('overview');
   const [isEditing, setIsEditing] = useState(false);
-  const [newJourneyEntry, setNewJourneyEntry] = useState('');
   const [seriesBooks, setSeriesBooks] = useState<SeriesBook[]>([]);
   const [loadingSeries, setLoadingSeries] = useState(false);
 
@@ -81,20 +80,6 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
     }
   };
 
-  const addJourneyEntry = () => {
-    if (!newJourneyEntry.trim()) return;
-    
-    const currentThoughts = book.thoughts || '';
-    const timestamp = format(new Date(), 'MMM d, yyyy');
-    const entry = `[${timestamp}] ${newJourneyEntry.trim()}`;
-    const updatedThoughts = currentThoughts 
-      ? `${currentThoughts}\n\n${entry}`
-      : entry;
-    
-    onUpdate(book.id, { thoughts: updatedThoughts });
-    setNewJourneyEntry('');
-  };
-
   const loadSeriesBooks = async (book: Book) => {
     setLoadingSeries(true);
     try {
@@ -132,22 +117,21 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: BookOpen },
-    { key: 'journey', label: 'My Journey', icon: MessageSquare },
     { key: 'progress', label: 'Progress', icon: Target },
     { key: 'series', label: 'Books in this series', icon: BookMarked },
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${statusConfig[book.status].bgColor}`}>
-              <StatusIcon className={`h-5 w-5 ${statusConfig[book.status].textColor}`} />
+              <StatusIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${statusConfig[book.status].textColor}`} />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 line-clamp-1">{book.title}</h2>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 line-clamp-1">{book.title}</h2>
               <p className="text-sm text-gray-600">by {book.author}</p>
             </div>
           </div>
@@ -157,57 +141,57 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               title="Edit book details"
             >
-              <Edit3 className="h-5 w-5 text-gray-400" />
+              <Edit3 className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </button>
             <button
               onClick={handleDelete}
               className="p-2 hover:bg-red-100 rounded-lg transition-colors"
               title="Delete book"
             >
-              <Trash2 className="h-5 w-5 text-red-400" />
+              <Trash2 className="h-4 w-4 sm:h-5 sm:w-5 text-red-400" />
             </button>
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <X className="h-5 w-5 text-gray-400" />
+              <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </button>
           </div>
         </div>
 
         {/* Tabs */}
         <div className="border-b border-gray-100">
-          <nav className="flex px-6" aria-label="Tabs">
+          <nav className="flex px-4 sm:px-6" aria-label="Tabs">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.key;
               return (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveTab(tab.key as 'overview' | 'journey' | 'progress' | 'series')}
-                  className={`flex items-center gap-2 py-4 px-4 font-medium text-sm border-b-2 transition-colors ${
+                  onClick={() => setActiveTab(tab.key as 'overview' | 'progress' | 'series')}
+                  className={`flex items-center gap-2 py-3 sm:py-4 px-3 sm:px-4 font-medium text-sm border-b-2 transition-colors ${
                     isActive
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
-                  {tab.label}
+                  <span className="hidden sm:inline">{tab.label}</span>
                 </button>
               );
             })}
           </nav>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Book Cover & Basic Info */}
+                {/* Book Cover & Details */}
                 <div className="lg:col-span-1">
-                  <div className="bg-gray-50 rounded-xl p-6">
-                    {/* Cover */}
+                  <div className="text-center">
+                    {/* Book Cover */}
                     <div className="mb-4">
                       {book.coverUrl ? (
                         <Image
@@ -281,7 +265,7 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
                   {/* Status Change */}
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-3">Reading Status</h3>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {Object.entries(statusConfig).map(([status, config]) => {
                         const Icon = config.icon;
                         const isActive = book.status === status;
@@ -363,67 +347,6 @@ export default function BookProfileModal({ book, onClose, onUpdate, onDelete }: 
                   )}
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Journey Tab */}
-          {activeTab === 'journey' && (
-            <div className="space-y-6">
-              {/* Add New Entry */}
-              <div className="bg-amber-50 rounded-xl p-6 border border-amber-200">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <Plus className="h-5 w-5" />
-                  Add Journey Entry
-                </h3>
-                <div className="space-y-3">
-                  <textarea
-                    value={newJourneyEntry}
-                    onChange={(e) => setNewJourneyEntry(e.target.value)}
-                    placeholder="What are your thoughts about this book? Any quotes, insights, or reflections..."
-                    className="w-full px-4 py-3 border border-amber-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                    rows={3}
-                  />
-                  <button
-                    onClick={addJourneyEntry}
-                    disabled={!newJourneyEntry.trim()}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Entry
-                  </button>
-                </div>
-              </div>
-
-              {/* Existing Thoughts */}
-              {book.thoughts && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">My Journey</h3>
-                  <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                      {book.thoughts}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Notes */}
-              {book.notes && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">Notes</h3>
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                    <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                      {book.notes}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!book.thoughts && !book.notes && (
-                <div className="text-center py-12 text-gray-500">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                  <p>No journey entries yet. Start by adding your first thoughts!</p>
-                </div>
-              )}
             </div>
           )}
 
