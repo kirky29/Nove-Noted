@@ -45,8 +45,6 @@ const convertFirestoreDoc = (doc: QueryDocumentSnapshot<DocumentData>): Book => 
     dateStarted: data.dateStarted?.toDate(),
     dateFinished: data.dateFinished?.toDate(),
     rating: data.rating,
-    thoughts: data.thoughts,
-    notes: data.notes,
     currentPage: data.currentPage,
     userId: data.userId,
   };
