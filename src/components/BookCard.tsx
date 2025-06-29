@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { Book } from '@/types/book';
-import { MoreVertical, Trash2, Star, Clock, CheckCircle2, Heart } from 'lucide-react';
-import { format } from 'date-fns';
+import { Star, Clock, CheckCircle2, Heart } from 'lucide-react';
 import Image from 'next/image';
 
 interface BookCardProps {
   book: Book;
   onUpdate: (id: string, updates: Partial<Book>) => void;
-  onDelete: (id: string) => void;
-  onOpenProfile: (book: Book) => void;
 }
 
 const statusConfig = {
@@ -29,26 +26,7 @@ const statusConfig = {
   },
 };
 
-export default function BookCard({ book, onUpdate, onDelete, onOpenProfile }: BookCardProps) {
-  const [showDropdown, setShowDropdown] = useState(false);
-
-  const StatusIcon = statusConfig[book.status].icon;
-
-  const handleStatusChange = (newStatus: Book['status']) => {
-    const updates: Partial<Book> = { status: newStatus };
-    
-    // Set appropriate dates based on status
-    if (newStatus === 'currently-reading' && !book.dateStarted) {
-      updates.dateStarted = new Date();
-    } else if (newStatus === 'read') {
-      if (!book.dateStarted) updates.dateStarted = new Date();
-      updates.dateFinished = new Date();
-    }
-    
-    onUpdate(book.id, updates);
-    setShowDropdown(false);
-  };
-
+export default function BookCard({ book, onUpdate }: BookCardProps) {
   const handleRatingChange = (rating: number) => {
     onUpdate(book.id, { rating });
   };
@@ -101,10 +79,7 @@ export default function BookCard({ book, onUpdate, onDelete, onOpenProfile }: Bo
             {[1, 2, 3, 4, 5].map((star) => (
               <Star
                 key={star}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRatingChange(star);
-                }}
+                onClick={() => handleRatingChange(star)}
                 className={`h-3 w-3 cursor-pointer ${star <= (book.rating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
               />
             ))}
