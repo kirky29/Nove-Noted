@@ -1,6 +1,6 @@
-export type ReadingStatus = 'want-to-read' | 'currently-reading' | 'read';
+export type ReadingStatus = 'currently-reading' | 'read';
 
-export type OwnershipType = 'physical' | 'digital' | 'interested';
+export type OwnershipType = 'physical' | 'digital';
 
 export interface Book {
   id: string;

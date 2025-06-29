@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Book, ReadingStatus, OwnershipType } from '@/types/book';
-import { X, BookOpen, User, Hash, Image as IconImage, FileText, Tag, Home, Tablet, Eye } from 'lucide-react';
+import { X, BookOpen, User, Hash, Image as IconImage, FileText, Tag, Home, Tablet } from 'lucide-react';
 import NextImage from 'next/image';
 
 interface AddBookModalProps {
@@ -16,7 +16,7 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
     coverUrl: '',
     pages: '',
     genre: '',
-    status: 'want-to-read' as ReadingStatus,
+    status: 'currently-reading' as ReadingStatus,
     ownershipType: 'physical' as OwnershipType,
     rating: 0,
     currentPage: '',
@@ -180,9 +180,8 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
           {/* Status */}
           <div>
             <label className="text-sm font-medium text-gray-700 mb-3 block">Reading Status</label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
-                { value: 'want-to-read', label: 'Want to Read', color: 'border-red-200 bg-red-50 text-red-700' },
                 { value: 'currently-reading', label: 'Currently Reading', color: 'border-orange-200 bg-orange-50 text-orange-700' },
                 { value: 'read', label: 'Read', color: 'border-green-200 bg-green-50 text-green-700' },
               ].map((status) => (
@@ -210,12 +209,12 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
           {/* Ownership Type */}
           <div>
             <label className="text-sm font-medium text-gray-700 mb-3 block">Ownership Type</label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
                 { 
                   value: 'physical', 
                   label: 'Physical Book', 
-                  description: 'I own this book',
+                  description: 'I own this book physically',
                   icon: Home,
                   color: 'border-green-200 bg-green-50 text-green-700' 
                 },
@@ -225,13 +224,6 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
                   description: 'eBook/audiobook',
                   icon: Tablet,
                   color: 'border-blue-200 bg-blue-50 text-blue-700' 
-                },
-                { 
-                  value: 'interested', 
-                  label: 'Interested', 
-                  description: 'Want to remember',
-                  icon: Eye,
-                  color: 'border-amber-200 bg-amber-50 text-amber-700' 
                 },
               ].map((ownership) => {
                 const Icon = ownership.icon;

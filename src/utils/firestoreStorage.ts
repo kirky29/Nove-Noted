@@ -209,7 +209,6 @@ export const firestoreStorage = {
         total: books.length,
         read: books.filter(book => book.status === 'read').length,
         currentlyReading: books.filter(book => book.status === 'currently-reading').length,
-        wantToRead: books.filter(book => book.status === 'want-to-read').length,
         wishList: wishListBooks.length,
       };
     } catch (error) {
@@ -402,7 +401,7 @@ export const firestoreStorage = {
   },
 
   // Move a book from wish list to main collection
-  moveWishListBookToCollection: async (wishListBookId: string, status: ReadingStatus = 'want-to-read'): Promise<Book | null> => {
+  moveWishListBookToCollection: async (wishListBookId: string, status: ReadingStatus = 'currently-reading'): Promise<Book | null> => {
     try {
       // Get the wish list book
       const wishListBooks = await firestoreStorage.getWishListBooks();

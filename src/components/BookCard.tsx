@@ -1,5 +1,5 @@
 import { Book } from '@/types/book';
-import { Star, Home, Tablet, Eye } from 'lucide-react';
+import { Star, Home, Tablet } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -26,8 +26,6 @@ export default function BookCard({ book, onUpdate }: BookCardProps) {
         return <Home className="h-3 w-3" />;
       case 'digital':
         return <Tablet className="h-3 w-3" />;
-      case 'interested':
-        return <Eye className="h-3 w-3" />;
       default:
         return <Home className="h-3 w-3" />;
     }
@@ -39,8 +37,6 @@ export default function BookCard({ book, onUpdate }: BookCardProps) {
         return 'Physical';
       case 'digital':
         return 'Digital';
-      case 'interested':
-        return 'Interested';
       default:
         return 'Physical';
     }
@@ -52,8 +48,6 @@ export default function BookCard({ book, onUpdate }: BookCardProps) {
         return 'from-green-50 to-emerald-50 text-green-700 border-green-100';
       case 'digital':
         return 'from-blue-50 to-cyan-50 text-blue-700 border-blue-100';
-      case 'interested':
-        return 'from-amber-50 to-yellow-50 text-amber-700 border-amber-100';
       default:
         return 'from-green-50 to-emerald-50 text-green-700 border-green-100';
     }

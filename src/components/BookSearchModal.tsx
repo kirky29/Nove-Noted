@@ -15,7 +15,7 @@ export default function BookSearchModal({ onClose, onAdd, onAddToWishList }: Boo
   const [searchResults, setSearchResults] = useState<BookSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedBook, setSelectedBook] = useState<BookSearchResult | null>(null);
-  const [status, setStatus] = useState<ReadingStatus>('want-to-read');
+  const [status, setStatus] = useState<ReadingStatus>('currently-reading');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debounced search
@@ -318,9 +318,8 @@ export default function BookSearchModal({ onClose, onAdd, onAddToWishList }: Boo
                     {/* Status Selection for Library */}
                     <div>
                       <h5 className="font-semibold text-gray-900 mb-3">Add to Library with Status</h5>
-                      <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="grid grid-cols-2 gap-2 mb-3">
                         {[
-                          { value: 'want-to-read', label: 'Want to Read', color: 'border-red-200 bg-red-50 text-red-700' },
                           { value: 'currently-reading', label: 'Currently Reading', color: 'border-orange-200 bg-orange-50 text-orange-700' },
                           { value: 'read', label: 'Read', color: 'border-green-200 bg-green-50 text-green-700' },
                         ].map((statusOption) => (

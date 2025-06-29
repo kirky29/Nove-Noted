@@ -22,7 +22,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook, onAddT
   const [existingWishListBook, setExistingWishListBook] = useState<WishListBook | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [status, setStatus] = useState<ReadingStatus>('want-to-read');
+  const [status, setStatus] = useState<ReadingStatus>('currently-reading');
   const [hasCamera, setHasCamera] = useState(true);
   const [scanning, setScanning] = useState(true);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment'); // Back camera by default
@@ -457,9 +457,8 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook, onAddT
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Reading Status (for library)
                     </label>
-                    <div className="grid grid-cols-3 gap-2 mb-4">
+                    <div className="grid grid-cols-2 gap-2 mb-4">
                       {[
-                        { value: 'want-to-read', label: 'Want to Read', color: 'border-red-200 bg-red-50 text-red-700' },
                         { value: 'currently-reading', label: 'Currently Reading', color: 'border-orange-200 bg-orange-50 text-orange-700' },
                         { value: 'read', label: 'Read', color: 'border-green-200 bg-green-50 text-green-700' },
                       ].map((statusOption) => (

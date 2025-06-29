@@ -21,7 +21,6 @@ import {
   ChevronDown,
   BookOpen,
   CheckCircle2,
-  Heart,
   FileText,
   Camera,
   Star,
@@ -106,19 +105,18 @@ export default function Home() {
     await firestoreStorage.deleteWishListBook(bookId);
   };
 
-  const handleMoveWishListBookToCollection = async (wishListBookId: string, status: ReadingStatus = 'want-to-read') => {
+  const handleMoveWishListBookToCollection = async (wishListBookId: string, status: ReadingStatus = 'currently-reading') => {
     await firestoreStorage.moveWishListBookToCollection(wishListBookId, status);
   };
 
   const getStats = () => {
     const reading = books.filter(book => book.status === 'currently-reading').length;
     const completed = books.filter(book => book.status === 'read').length;
-    const wantToRead = books.filter(book => book.status === 'want-to-read').length;
     const totalPages = books
       .filter(book => book.status === 'read')
       .reduce((sum, book) => sum + (book.pages || 0), 0);
 
-    return { reading, completed, wantToRead, totalPages, wishList: wishListBooks.length };
+    return { reading, completed, totalPages, wishList: wishListBooks.length };
   };
 
   const stats = getStats();
@@ -143,7 +141,6 @@ export default function Home() {
 
   const tabs = [
     { key: 'all' as const, label: 'My Library', mobileLabel: 'Library', icon: '📚' },
-    { key: 'want-to-read' as const, label: 'Want to Read', mobileLabel: 'Want to Read', icon: '📚' },
     { key: 'currently-reading' as const, label: 'Currently Reading', mobileLabel: 'Reading', icon: '📖' },
     { key: 'read' as const, label: 'Read', mobileLabel: 'Read', icon: '✅' },
     { key: 'wishlist' as const, label: 'Wish List', mobileLabel: 'Wish List', icon: '⭐' },
@@ -225,13 +222,12 @@ export default function Home() {
 
         {/* Stats Cards */}
         <div className="flex gap-2 overflow-x-auto mb-4 hide-scrollbar">
-          <div className="flex gap-2 min-w-max">
-            <StatsCard title="Currently Reading" value={stats.reading} icon={BookOpen} color="blue" />
-            <StatsCard title="Books Completed" value={stats.completed} icon={CheckCircle2} color="green" />
-            <StatsCard title="Want to Read" value={stats.wantToRead} icon={Heart} color="red" />
-            <StatsCard title="Wish List" value={stats.wishList} icon={Star} color="purple" />
-            <StatsCard title="Pages Read" value={stats.totalPages} icon={FileText} color="orange" />
-          </div>
+                  <div className="flex gap-2 min-w-max">
+          <StatsCard title="Currently Reading" value={stats.reading} icon={BookOpen} color="blue" />
+          <StatsCard title="Books Completed" value={stats.completed} icon={CheckCircle2} color="green" />
+          <StatsCard title="Wish List" value={stats.wishList} icon={Star} color="purple" />
+          <StatsCard title="Pages Read" value={stats.totalPages} icon={FileText} color="orange" />
+        </div>
         </div>
 
         {/* Action Buttons */}
@@ -397,7 +393,9 @@ export default function Home() {
                   ? 'Start adding books you want to read someday!'
                   : activeTab === 'all' 
                     ? 'Start building your personal library by adding your first book!'
-                    : `Add some books to your ${activeTab.replace('-', ' ')} list!`
+                    : activeTab === 'currently-reading'
+                      ? 'Add some books you are currently reading!'
+                      : 'Add some books you have read!'
               }
             </p>
             {!searchQuery && (

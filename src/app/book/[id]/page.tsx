@@ -8,9 +8,9 @@ import { firestoreStorage } from '@/utils/firestoreStorage';
 import { googleBooksAPI } from '@/utils/googleBooks';
 import { 
   ArrowLeft, BookOpen, Calendar, Hash, Star, Edit3, Trash2, 
-  Clock, CheckCircle2, Heart,
+  Clock, CheckCircle2,
   FileText, Target, User, LogOut, ChevronDown, BookMarked,
-  Home, Tablet, Eye
+  Home, Tablet
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Image from 'next/image';
@@ -104,13 +104,6 @@ export default function BookProfilePage() {
   }
 
   const statusConfig = {
-    'want-to-read': {
-      icon: Heart,
-      label: 'Want to Read',
-      color: 'border-red-200 bg-red-50 text-red-700',
-      bgColor: 'bg-red-50',
-      textColor: 'text-red-700'
-    },
     'currently-reading': {
       icon: Clock,
       label: 'Currently Reading',
@@ -140,12 +133,6 @@ export default function BookProfilePage() {
       description: 'I have this as an eBook/audiobook',
       color: 'border-blue-200 bg-blue-50 text-blue-700',
     },
-    'interested': {
-      icon: Eye,
-      label: 'Interested',
-      description: 'I saw this book and want to remember it',
-      color: 'border-amber-200 bg-amber-50 text-amber-700',
-    },
   };
 
   const handleStatusChange = async (newStatus: ReadingStatus) => {
@@ -167,7 +154,7 @@ export default function BookProfilePage() {
     setBook({ ...book, rating });
   };
 
-  const handleOwnershipTypeChange = async (ownershipType: 'physical' | 'digital' | 'interested') => {
+  const handleOwnershipTypeChange = async (ownershipType: 'physical' | 'digital') => {
     await firestoreStorage.updateBook(book.id, { ownershipType });
     setBook({ ...book, ownershipType });
   };
@@ -444,7 +431,7 @@ export default function BookProfilePage() {
                         return (
                           <button
                             key={ownership}
-                            onClick={() => handleOwnershipTypeChange(ownership as 'physical' | 'digital' | 'interested')}
+                                                         onClick={() => handleOwnershipTypeChange(ownership as 'physical' | 'digital')}
                             className={`p-3 rounded-lg border-2 text-center text-sm font-medium transition-all ${
                               isActive 
                                 ? config.color + ' ring-2 ring-offset-2'

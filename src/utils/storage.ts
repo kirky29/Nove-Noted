@@ -87,7 +87,6 @@ export const storage = {
       total: books.length,
       read: books.filter(book => book.status === 'read').length,
       currentlyReading: books.filter(book => book.status === 'currently-reading').length,
-      wantToRead: books.filter(book => book.status === 'want-to-read').length,
     };
   },
 }; 
