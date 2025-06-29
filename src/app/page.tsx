@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginPage from '@/components/LoginPage';
@@ -31,7 +30,6 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
-  const router = useRouter();
   const { user, signOut } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [wishListBooks, setWishListBooks] = useState<WishListBook[]>([]);
@@ -102,10 +100,6 @@ export default function Home() {
 
   const handleUpdateBook = async (updatedBook: Book) => {
     await firestoreStorage.updateBook(updatedBook.id, updatedBook);
-  };
-
-  const handleDeleteBook = async (bookId: string) => {
-    await firestoreStorage.deleteBook(bookId);
   };
 
   const handleDeleteWishListBook = async (bookId: string) => {
