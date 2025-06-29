@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Book, ReadingStatus } from '@/types/book';
-import { X, BookOpen, User, Hash, Image as IconImage, FileText, Tag } from 'lucide-react';
+import { Book, ReadingStatus, OwnershipType } from '@/types/book';
+import { X, BookOpen, User, Hash, Image as IconImage, FileText, Tag, Home, Tablet, Eye } from 'lucide-react';
 import NextImage from 'next/image';
 
 interface AddBookModalProps {
@@ -17,6 +17,7 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
     pages: '',
     genre: '',
     status: 'want-to-read' as ReadingStatus,
+    ownershipType: 'physical' as OwnershipType,
     rating: 0,
     currentPage: '',
   });
@@ -37,6 +38,7 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
       pages: formData.pages ? parseInt(formData.pages) : undefined,
       genre: formData.genre.trim() || undefined,
       status: formData.status,
+      ownershipType: formData.ownershipType,
       rating: formData.rating || undefined,
       currentPage: formData.currentPage ? parseInt(formData.currentPage) : undefined,
       dateStarted: formData.status === 'currently-reading' ? new Date() : undefined,
@@ -202,6 +204,59 @@ export default function AddBookModal({ onClose, onAdd }: AddBookModalProps) {
                   </div>
                 </label>
               ))}
+            </div>
+          </div>
+
+          {/* Ownership Type */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-3 block">Ownership Type</label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {[
+                { 
+                  value: 'physical', 
+                  label: 'Physical Book', 
+                  description: 'I own this book',
+                  icon: Home,
+                  color: 'border-green-200 bg-green-50 text-green-700' 
+                },
+                { 
+                  value: 'digital', 
+                  label: 'Digital Copy', 
+                  description: 'eBook/audiobook',
+                  icon: Tablet,
+                  color: 'border-blue-200 bg-blue-50 text-blue-700' 
+                },
+                { 
+                  value: 'interested', 
+                  label: 'Interested', 
+                  description: 'Want to remember',
+                  icon: Eye,
+                  color: 'border-amber-200 bg-amber-50 text-amber-700' 
+                },
+              ].map((ownership) => {
+                const Icon = ownership.icon;
+                return (
+                  <label key={ownership.value} className="cursor-pointer">
+                    <input
+                      type="radio"
+                      name="ownershipType"
+                      value={ownership.value}
+                      checked={formData.ownershipType === ownership.value}
+                      onChange={(e) => handleInputChange('ownershipType', e.target.value)}
+                      className="sr-only"
+                    />
+                    <div className={`p-4 rounded-xl border-2 text-center transition-all ${
+                      formData.ownershipType === ownership.value 
+                        ? ownership.color + ' ring-2 ring-offset-2'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}>
+                      <Icon className="h-5 w-5 mx-auto mb-2" />
+                      <div className="font-medium">{ownership.label}</div>
+                      <div className="text-xs opacity-75 mt-1">{ownership.description}</div>
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           </div>
 

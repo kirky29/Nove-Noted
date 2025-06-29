@@ -9,7 +9,8 @@ import { googleBooksAPI } from '@/utils/googleBooks';
 import { 
   ArrowLeft, BookOpen, Calendar, Hash, Star, Edit3, Trash2, 
   Clock, CheckCircle2, Heart,
-  FileText, Target, User, LogOut, ChevronDown, BookMarked
+  FileText, Target, User, LogOut, ChevronDown, BookMarked,
+  Home, Tablet, Eye
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Image from 'next/image';
@@ -126,6 +127,27 @@ export default function BookProfilePage() {
     },
   };
 
+  const ownershipConfig = {
+    'physical': {
+      icon: Home,
+      label: 'Physical Book',
+      description: 'I own this book physically',
+      color: 'border-green-200 bg-green-50 text-green-700',
+    },
+    'digital': {
+      icon: Tablet,
+      label: 'Digital Copy',
+      description: 'I have this as an eBook/audiobook',
+      color: 'border-blue-200 bg-blue-50 text-blue-700',
+    },
+    'interested': {
+      icon: Eye,
+      label: 'Interested',
+      description: 'I saw this book and want to remember it',
+      color: 'border-amber-200 bg-amber-50 text-amber-700',
+    },
+  };
+
   const handleStatusChange = async (newStatus: ReadingStatus) => {
     const updates: Partial<Book> = { status: newStatus };
     
@@ -143,6 +165,11 @@ export default function BookProfilePage() {
   const handleRatingChange = async (rating: number) => {
     await firestoreStorage.updateBook(book.id, { rating });
     setBook({ ...book, rating });
+  };
+
+  const handleOwnershipTypeChange = async (ownershipType: 'physical' | 'digital' | 'interested') => {
+    await firestoreStorage.updateBook(book.id, { ownershipType });
+    setBook({ ...book, ownershipType });
   };
 
   const handleProgressUpdate = async (currentPage: number) => {
@@ -401,6 +428,32 @@ export default function BookProfilePage() {
                           >
                             <Icon className="h-5 w-5 mx-auto mb-1" />
                             {config.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Ownership Type */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3">Ownership Type</h3>
+                    <div className="grid grid-cols-3 gap-3">
+                      {Object.entries(ownershipConfig).map(([ownership, config]) => {
+                        const Icon = config.icon;
+                        const isActive = (book.ownershipType || 'physical') === ownership;
+                        return (
+                          <button
+                            key={ownership}
+                            onClick={() => handleOwnershipTypeChange(ownership as 'physical' | 'digital' | 'interested')}
+                            className={`p-3 rounded-lg border-2 text-center text-sm font-medium transition-all ${
+                              isActive 
+                                ? config.color + ' ring-2 ring-offset-2'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <Icon className="h-5 w-5 mx-auto mb-1" />
+                            <div className="font-medium">{config.label}</div>
+                            <div className="text-xs opacity-75 mt-1">{config.description}</div>
                           </button>
                         );
                       })}

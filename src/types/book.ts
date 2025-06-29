@@ -1,5 +1,7 @@
 export type ReadingStatus = 'want-to-read' | 'currently-reading' | 'read';
 
+export type OwnershipType = 'physical' | 'digital' | 'interested';
+
 export interface Book {
   id: string;
   title: string;
@@ -9,6 +11,7 @@ export interface Book {
   pages?: number;
   genre?: string;
   status: ReadingStatus;
+  ownershipType: OwnershipType; // Physical book, digital copy, or just interested
   dateAdded: Date;
   dateStarted?: Date;
   dateFinished?: Date;

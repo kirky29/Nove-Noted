@@ -1,6 +1,7 @@
 import { Book } from '@/types/book';
-import { Star } from 'lucide-react';
+import { Star, Home, Tablet, Eye } from 'lucide-react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 interface BookCardProps {
   book: Book;
@@ -8,12 +9,70 @@ interface BookCardProps {
 }
 
 export default function BookCard({ book, onUpdate }: BookCardProps) {
-  const handleRatingChange = (rating: number) => {
+  const router = useRouter();
+
+  const handleRatingChange = (rating: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click when rating
     onUpdate(book.id, { rating });
   };
 
+  const handleCardClick = () => {
+    router.push(`/book/${book.id}`);
+  };
+
+  const getOwnershipIcon = () => {
+    switch (book.ownershipType || 'physical') {
+      case 'physical':
+        return <Home className="h-3 w-3" />;
+      case 'digital':
+        return <Tablet className="h-3 w-3" />;
+      case 'interested':
+        return <Eye className="h-3 w-3" />;
+      default:
+        return <Home className="h-3 w-3" />;
+    }
+  };
+
+  const getOwnershipLabel = () => {
+    switch (book.ownershipType || 'physical') {
+      case 'physical':
+        return 'Physical';
+      case 'digital':
+        return 'Digital';
+      case 'interested':
+        return 'Interested';
+      default:
+        return 'Physical';
+    }
+  };
+
+  const getOwnershipColor = () => {
+    switch (book.ownershipType || 'physical') {
+      case 'physical':
+        return 'from-green-50 to-emerald-50 text-green-700 border-green-100';
+      case 'digital':
+        return 'from-blue-50 to-cyan-50 text-blue-700 border-blue-100';
+      case 'interested':
+        return 'from-amber-50 to-yellow-50 text-amber-700 border-amber-100';
+      default:
+        return 'from-green-50 to-emerald-50 text-green-700 border-green-100';
+    }
+  };
+
   return (
-    <div className="book-card bg-white rounded-xl p-3 sm:p-4 flex flex-col items-center border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200">
+    <div 
+      className="book-card bg-white rounded-xl p-3 sm:p-4 flex flex-col items-center border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none"
+      onClick={handleCardClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`View details for ${book.title} by ${book.author}`}
+    >
       {/* Book Cover */}
       <div className="w-full flex justify-center mb-3">
         {book.coverUrl ? (
@@ -38,11 +97,18 @@ export default function BookCard({ book, onUpdate }: BookCardProps) {
         </h3>
         <p className="text-gray-600 text-xs sm:text-sm text-center line-clamp-1 mb-1">{book.author}</p>
         
-        {book.genre && (
-          <span className="inline-block px-3 py-1 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 text-xs rounded-full font-medium border border-blue-100">
-            {book.genre}
+        {/* Genre and Ownership badges */}
+        <div className="flex flex-wrap gap-2 justify-center">
+          {book.genre && (
+            <span className="inline-block px-3 py-1 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 text-xs rounded-full font-medium border border-blue-100">
+              {book.genre}
+            </span>
+          )}
+          <span className={`inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r ${getOwnershipColor()} text-xs rounded-full font-medium border`}>
+            {getOwnershipIcon()}
+            <span>{getOwnershipLabel()}</span>
           </span>
-        )}
+        </div>
         
         {/* Status/Progress */}
         {book.status === 'currently-reading' && book.pages && (
@@ -66,7 +132,7 @@ export default function BookCard({ book, onUpdate }: BookCardProps) {
             {[1, 2, 3, 4, 5].map((star) => (
               <Star
                 key={star}
-                onClick={() => handleRatingChange(star)}
+                onClick={(e) => handleRatingChange(star, e)}
                 className={`h-4 w-4 cursor-pointer transition-colors duration-150 ${
                   star <= (book.rating || 0) 
                     ? 'text-yellow-500 fill-current hover:text-yellow-600' 

@@ -64,6 +64,7 @@ export default function BookSearchModal({ onClose, onAdd, onAddToWishList }: Boo
       pages: selectedBook.pages,
       genre: selectedBook.genre,
       status: status,
+      ownershipType: 'physical', // Default to physical when adding from search
       dateStarted: status === 'currently-reading' ? new Date() : undefined,
       dateFinished: status === 'read' ? new Date() : undefined,
     };
