@@ -25,11 +25,12 @@ import {
   Camera,
   Star,
   Trash2,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react';
 
 export default function Home() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading, error: authError } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [wishListBooks, setWishListBooks] = useState<WishListBook[]>([]);
   const [activeTab, setActiveTab] = useState<ReadingStatus | 'all' | 'wishlist'>('all');
@@ -38,27 +39,119 @@ export default function Home() {
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [firestoreError, setFirestoreError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
-      const unsubscribeBooks = firestoreStorage.onBooksChange((updatedBooks: Book[]) => {
-        setBooks(updatedBooks);
-      });
+      try {
+        console.log('Setting up Firestore listeners for user:', user.uid);
+        
+        const unsubscribeBooks = firestoreStorage.onBooksChange((updatedBooks: Book[]) => {
+          console.log('Books updated:', updatedBooks.length);
+          setBooks(updatedBooks);
+          setFirestoreError(null);
+        });
 
-      const unsubscribeWishList = firestoreStorage.onWishListBooksChange((updatedWishListBooks: WishListBook[]) => {
-        setWishListBooks(updatedWishListBooks);
-      });
+        const unsubscribeWishList = firestoreStorage.onWishListBooksChange((updatedWishListBooks: WishListBook[]) => {
+          console.log('Wish list updated:', updatedWishListBooks.length);
+          setWishListBooks(updatedWishListBooks);
+          setFirestoreError(null);
+        });
 
-      return () => {
-        unsubscribeBooks();
-        unsubscribeWishList();
-      };
+        return () => {
+          console.log('Cleaning up Firestore listeners');
+          unsubscribeBooks();
+          unsubscribeWishList();
+        };
+      } catch (error) {
+        console.error('Error setting up Firestore listeners:', error);
+        setFirestoreError(error instanceof Error ? error.message : 'Failed to connect to database');
+      }
     }
   }, [user]);
+
+  // Show loading screen
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if authentication failed
+  if (authError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full mx-auto p-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              <h2 className="text-lg font-semibold text-red-800">Authentication Error</h2>
+            </div>
+            <p className="text-red-700 text-sm mb-4">{authError}</p>
+            <div className="space-y-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Reload Page
+              </button>
+              <details className="text-xs text-red-600">
+                <summary className="cursor-pointer">Debug Info</summary>
+                <pre className="mt-2 whitespace-pre-wrap">
+                  {JSON.stringify({
+                    userAgent: navigator.userAgent,
+                    hostname: window.location.hostname,
+                    protocol: window.location.protocol,
+                    timestamp: new Date().toISOString()
+                  }, null, 2)}
+                </pre>
+              </details>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Show login page if user is not authenticated
   if (!user) {
     return <LoginPage />;
+  }
+
+  // Show Firestore error if database connection failed
+  if (firestoreError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full mx-auto p-6">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              <h2 className="text-lg font-semibold text-yellow-800">Database Connection Error</h2>
+            </div>
+            <p className="text-yellow-700 text-sm mb-4">{firestoreError}</p>
+            <div className="space-y-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+              >
+                Retry Connection
+              </button>
+              <button
+                onClick={() => setFirestoreError(null)}
+                className="w-full px-4 py-2 border border-yellow-300 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors"
+              >
+                Continue Offline
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Filter books based on active tab and search query
@@ -79,7 +172,13 @@ export default function Home() {
   });
 
   const handleAddBook = async (newBook: Omit<Book, 'id' | 'dateAdded'>) => {
-    await firestoreStorage.addBook(newBook);
+    try {
+      await firestoreStorage.addBook(newBook);
+      setIsAddModalOpen(false);
+    } catch (error) {
+      console.error('Error adding book:', error);
+      setFirestoreError(error instanceof Error ? error.message : 'Failed to add book');
+    }
   };
 
   const handleAddWishListBook = async (newBook: Omit<WishListBook, 'id' | 'dateAdded'>) => {
@@ -87,26 +186,39 @@ export default function Home() {
     try {
       const result = await firestoreStorage.addWishListBook(newBook);
       console.log('✅ Book added to wish list successfully:', result);
+      setIsSearchModalOpen(false);
+      setIsScanModalOpen(false);
     } catch (error) {
       console.error('❌ Error adding book to wish list:', error);
-      // Log the full error details
-      if (error instanceof Error) {
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-      }
+      setFirestoreError(error instanceof Error ? error.message : 'Failed to add book to wish list');
     }
   };
 
   const handleUpdateBook = async (updatedBook: Book) => {
-    await firestoreStorage.updateBook(updatedBook.id, updatedBook);
+    try {
+      await firestoreStorage.updateBook(updatedBook.id, updatedBook);
+    } catch (error) {
+      console.error('Error updating book:', error);
+      setFirestoreError(error instanceof Error ? error.message : 'Failed to update book');
+    }
   };
 
   const handleDeleteWishListBook = async (bookId: string) => {
-    await firestoreStorage.deleteWishListBook(bookId);
+    try {
+      await firestoreStorage.deleteWishListBook(bookId);
+    } catch (error) {
+      console.error('Error deleting wish list book:', error);
+      setFirestoreError(error instanceof Error ? error.message : 'Failed to delete book from wish list');
+    }
   };
 
   const handleMoveWishListBookToCollection = async (wishListBookId: string, status: ReadingStatus = 'currently-reading') => {
-    await firestoreStorage.moveWishListBookToCollection(wishListBookId, status);
+    try {
+      await firestoreStorage.moveWishListBookToCollection(wishListBookId, status);
+    } catch (error) {
+      console.error('Error moving book to collection:', error);
+      setFirestoreError(error instanceof Error ? error.message : 'Failed to move book to collection');
+    }
   };
 
   const getStats = () => {
