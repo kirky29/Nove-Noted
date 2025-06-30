@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -18,7 +18,11 @@ export const metadata: Metadata = {
   description: "A beautiful, responsive web app for tracking the books you own. Keep track of your personal library with ratings and reading status.",
   keywords: ["books", "library", "tracker", "collection", "ratings", "reading"],
   authors: [{ name: "Novel Noted" }],
-  viewport: "width=device-width, initial-scale=1",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

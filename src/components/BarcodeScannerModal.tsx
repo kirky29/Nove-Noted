@@ -52,59 +52,6 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook, onAddT
     };
   }, [isOpen]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const scanFrame = useCallback(() => {
-    if (!webcamRef.current || !readerRef.current || !scanning || scannedBook || isLoading) {
-      return;
-    }
-
-    try {
-      const canvas = webcamRef.current.getCanvas();
-      if (!canvas) return;
-
-      // Prevent too frequent scans
-      const now = Date.now();
-      if (now - lastScanTime < 1000) return;
-
-      try {
-        const result = readerRef.current.decodeFromCanvas(canvas);
-        if (result && result.getText()) {
-          setLastScanTime(now);
-          handleBarcodeScan(result.getText());
-        }
-      } catch (err: unknown) {
-        // Ignore common "not found" errors - they're normal when no barcode is found
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        if (!errorMessage.includes('not found') && !errorMessage.includes('No QR')) {
-          console.warn('Scan error:', err);
-        }
-      }
-    } catch (err) {
-      console.warn('Frame capture error:', err);
-    }
-  }, [scanning, scannedBook, isLoading, lastScanTime]);
-
-  // Start scanning when camera is ready
-  useEffect(() => {
-    if (isOpen && scanning && !scannedBook && !error && hasCamera) {
-      // Clear any existing interval
-      if (scanIntervalRef.current) {
-        clearInterval(scanIntervalRef.current);
-      }
-
-      // Start scanning every 500ms
-      scanIntervalRef.current = setInterval(() => {
-        scanFrame();
-      }, 500);
-    }
-
-    return () => {
-      if (scanIntervalRef.current) {
-        clearInterval(scanIntervalRef.current);
-      }
-    };
-  }, [isOpen, scanning, scannedBook, error, hasCamera, scanFrame]);
-
   const handleBarcodeScan = useCallback(async (result: string) => {
     if (!result || isLoading || scannedBook) return;
     
@@ -173,6 +120,58 @@ export default function BarcodeScannerModal({ isOpen, onClose, onAddBook, onAddT
       setIsLoading(false);
     }
   }, [isLoading, scannedBook]);
+
+  const scanFrame = useCallback(() => {
+    if (!webcamRef.current || !readerRef.current || !scanning || scannedBook || isLoading) {
+      return;
+    }
+
+    try {
+      const canvas = webcamRef.current.getCanvas();
+      if (!canvas) return;
+
+      // Prevent too frequent scans
+      const now = Date.now();
+      if (now - lastScanTime < 1000) return;
+
+      try {
+        const result = readerRef.current.decodeFromCanvas(canvas);
+        if (result && result.getText()) {
+          setLastScanTime(now);
+          handleBarcodeScan(result.getText());
+        }
+      } catch (err: unknown) {
+        // Ignore common "not found" errors - they're normal when no barcode is found
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (!errorMessage.includes('not found') && !errorMessage.includes('No QR')) {
+          console.warn('Scan error:', err);
+        }
+      }
+    } catch (err) {
+      console.warn('Frame capture error:', err);
+    }
+  }, [scanning, scannedBook, isLoading, lastScanTime, handleBarcodeScan]);
+
+  // Start scanning when camera is ready
+  useEffect(() => {
+    if (isOpen && scanning && !scannedBook && !error && hasCamera) {
+      // Clear any existing interval
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+      }
+
+      // Start scanning every 500ms
+      scanIntervalRef.current = setInterval(() => {
+        scanFrame();
+      }, 500);
+    }
+
+    return () => {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+      }
+    };
+  }, [isOpen, scanning, scannedBook, error, hasCamera, scanFrame]);
 
   const handleAddToLibrary = () => {
     if (!scannedBook) return;
